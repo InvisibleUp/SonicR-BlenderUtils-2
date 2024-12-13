@@ -8,73 +8,74 @@ seq:
     doc: unused
     size: header_len * 128
     
-  - id: trkpart_cnt
+  - id: num_trkparts
     type: u4
   - id: trkparts
     type: trkpart
     repeat: expr
-    repeat-expr: trkpart_cnt
+    repeat-expr: num_trkparts
     
-  - id: decopart_cnt
+  - id: num_decoparts
     type: u4
   - id: decoparts
     type: decopart
     repeat: expr
-    repeat-expr: decopart_cnt
+    repeat-expr: num_decoparts
     
-  - id: pathpoint_cnt
+  - id: num_pathpoints
     type: u4
   - id: pathpoints
     doc: Paths for all routes
     type: coords
     repeat: expr
-    repeat-expr: pathpoint_cnt
+    repeat-expr: num_pathpoints
     
-  - id: intropoint_cnt
+  - id: num_intropoints
     type: u4
   - id: intropoints
     doc: Path the intro camera takes. Not position data.
     type: coords
     repeat: expr
-    repeat-expr: intropoint_cnt
+    repeat-expr: num_intropoints
     
-  - id: sec5_cnt
+  - id: num_sec5
     type: u4
   - id: sec5
     doc: Section 5 (unknown)
     type: coords
     repeat: expr
-    repeat-expr: sec5_cnt
+    repeat-expr: num_sec5
   
-  - id: mainpoint_cnt
+  - id: num_mainpoints
     type: u4
   - id: mainpoints
     doc: Path across the "main route" of the track
     type: coords
     repeat: expr
-    repeat-expr: mainpoint_cnt
+    repeat-expr: num_mainpoints
     
-  - id: playerpos_cnt
+  - id: num_playerpos
     type: u4
+    doc: constant
   - id: playerpos
     doc: Player start/end locations.
     type: playerpos_t
     
-  - id: replaypos_cnt
+  - id: num_replaypos
     type: u4
   - id: replaypos
     doc: Replay camera positions
     type: coords
     repeat: expr
-    repeat-expr: replaypos_cnt
+    repeat-expr: num_replaypos
     
-  - id: sec9_cnt
+  - id: num_sec9
     type: u4
   - id: sec9
     doc: Section 9 (unknown)
     type: u2
     repeat: expr
-    repeat-expr: (sec9_cnt-1)*3
+    repeat-expr: (num_sec9-1)*3
     
 types:
   trkpart:
@@ -87,18 +88,18 @@ types:
       type: s4
     - id: clip
       type: u4
-    - id: vtx_cnt
+    - id: num_vtxs
       type: u4
     - id: vtxs
       type: trkvtx
       repeat: expr
-      repeat-expr: vtx_cnt
-    - id: face_cnt
+      repeat-expr: num_vtxs
+    - id: num_faces
       type: u4
     - id: faces
       type: trkface
       repeat: expr
-      repeat-expr: face_cnt
+      repeat-expr: num_faces
     - id: objs
       type: trkobj
       repeat: until
@@ -165,24 +166,24 @@ types:
       type: s4
     - id: unk
       size: 6
-    - id: tri_cnt
+    - id: num_tris
       type: u4
     - id: tris
       type: decotri
       repeat: expr
-      repeat-expr: tri_cnt
-    - id: quad_cnt
+      repeat-expr: num_tris
+    - id: num_quads
       type: u4
     - id: quads
       type: decoquad
       repeat: expr
-      repeat-expr: quad_cnt
-    - id: vtx_cnt
+      repeat-expr: num_quads
+    - id: num_vtxs
       type: u4
     - id: vtxs
       type: decovtx
       repeat: expr
-      repeat-expr: vtx_cnt
+      repeat-expr: num_vtxs
   decotri:
     seq:
     - id: a

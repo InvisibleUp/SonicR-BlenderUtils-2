@@ -1,5 +1,6 @@
 meta:
   id: src
+  file-extension: ter
   endian: le
 doc: Sonic R Collision Format
 seq:

@@ -1,5 +1,6 @@
 meta:
   id: srm
+  file-extension: bin
   endian: le
 doc: Sonic R Character Model
 seq:
@@ -9,35 +10,35 @@ seq:
 types:
   group:
     seq:
-    - id: vtx_cnt
+    - id: num_vtxs
       doc: Number of vertices
       type: u4
     - id: vtxs
       doc: Vertices
       type: vertex
       repeat: expr
-      repeat-expr: vtx_cnt
-      if: vtx_cnt != 0xFFFFFFFF
-    - id: tri_cnt
+      repeat-expr: num_vtxs
+      if: num_vtxs != 0xFFFFFFFF
+    - id: num_tris
       doc: Number of triangles
       type: u4
-      if: vtx_cnt != 0xFFFFFFFF
+      if: num_vtxs != 0xFFFFFFFF
     - id: tris
       doc: Triangles
       type: tri
       repeat: expr
-      repeat-expr: tri_cnt
-      if: vtx_cnt != 0xFFFFFFFF
-    - id: quad_cnt
+      repeat-expr: num_tris
+      if: num_vtxs != 0xFFFFFFFF
+    - id: num_quads
       doc: Number of quads
       type: u4
-      if: vtx_cnt != 0xFFFFFFFF
+      if: num_vtxs != 0xFFFFFFFF
     - id: quads
       doc: Quads
       type: quad
       repeat: expr
-      repeat-expr: quad_cnt
-      if: vtx_cnt != 0xFFFFFFFF
+      repeat-expr: num_quads
+      if: num_vtxs != 0xFFFFFFFF
   vertex:
     seq:
       - id: x

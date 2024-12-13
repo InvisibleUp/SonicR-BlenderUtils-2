@@ -4,7 +4,7 @@ meta:
   endian: le
 doc: Sonic R Character Animation
 seq:
-  - id: limb_cnt
+  - id: num_limbs
     doc: Number of limbs
     type: u4
   - id: frames
@@ -17,7 +17,7 @@ types:
       - id: limbs
         type: limb
         repeat: expr
-        repeat-expr: _root.limb_cnt
+        repeat-expr: _root.num_limbs
   limb:
     seq:
       - id: tx
