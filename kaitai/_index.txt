@@ -1,0 +1,5 @@
+sra - Character Animation
+srm - Character Model
+srg - Character Gourads (vertex colors)
+src - Track Collision
+srt - Track Model
