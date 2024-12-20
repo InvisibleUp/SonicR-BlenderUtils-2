@@ -1,0 +1,100 @@
+{
+    "name": "Resort Island",
+    "file_trk": "island/island_e.bin",
+    "file_col": "bin/extras/island.ter",
+    "file_ai":  "ai/aistuffi.bin",
+    "textures": [
+        "island/island04.png",
+        "island/island01.png",
+        "island/island02.png",
+        "island/island00.png",
+        "general/player00.png",
+        "island/island03.png",
+        "island/island05.png",
+        "general/misc00.png",
+        "general/misc01.png",
+        "general/player01.png",
+        "general/icon00.png",
+        "general/icon01.png",
+        "general/plop.png",
+        "island/island06.png"
+    ],
+    "textures_snow": [
+        "island/island04.png",
+        "island/island01.png",
+        "island/island02.png",
+        "island/island00.png",
+        "general/player00.png",
+        "island/island03.png",
+        "island/island05.png",
+        "general/misc00.png",
+        "general/misc01.png",
+        "general/player01.png",
+        "general/icon00.png",
+        "general/icon01.png",
+        "general/plop.png",
+        "island/island06.png"
+    ],
+    "global_color": {
+        "clear": {
+            "sunset": {
+                "r": "0xEE",
+                "g": "0xBF",
+                "b": "0x87",
+                "sun_angle": "0xA54"
+            },
+            "day": {
+                "r": "0x44",
+                "g": "0x75",
+                "b": "0xFE",
+                "sun_angle": "0x628"
+            },
+            "night": {
+                "r": "0xBA",
+                "g": "0xCD",
+                "b": "0xCE",
+                "sun_angle": "0xC08"
+            }
+        },
+        "rain": {
+            "sunset": {
+                "r": "0xE2",
+                "g": "0x9A",
+                "b": "0xB9",
+                "sun_angle": "0x814"
+            },
+            "day": {
+                "r": "0x99",
+                "g": "0xBA",
+                "b": "0xA3",
+                "sun_angle": "0x7B4"
+            },
+            "night": {
+                "r": "0x22",
+                "g": "0x3A",
+                "b": "0x2B",
+                "sun_angle": "0xB7C"
+            }
+        },
+        "snow": {
+            "sunset": {
+                "r": "0xE5",
+                "g": "0xB2",
+                "b": "0x4D",
+                "sun_angle": "0x119"
+            },
+            "day": {
+                "r": "0x7A",
+                "g": "0x96",
+                "b": "0xB4",
+                "sun_angle": "0x407"
+            },
+            "night": {
+                "r": "0x1F",
+                "g": "0x27",
+                "b": "0x4B",
+                "sun_angle": "0xB92"
+            }
+        }
+    }
+}
