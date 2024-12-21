@@ -275,7 +275,6 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
         me.vertices.add(trkPart.num_vtxs)
         me.loops.add(sum(face_lengths))
         me.polygons.add(trkPart.num_faces)
-        uvtex = me.uv_layers.new()
         colormap = ob.data.color_attributes.new(
             name='',
             type='FLOAT_COLOR',
@@ -308,6 +307,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
         me.update(calc_edges=True)
         me.validate()
 
+        uvtex = me.uv_layers.new()
         j = 0
         for p, f in zip(me.polygons, trkPart.faces):
             # set textures
@@ -319,7 +319,6 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
             p.material_index = f.tpage
         
         new_objects.append(ob)
-        break
         
     # Decoration parts
     '''for a in range(0, len(DecoParts)):
