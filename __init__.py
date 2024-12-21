@@ -286,9 +286,9 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
 
         for src, dst, color in zip(trkPart.vtxs, me.vertices, colormap.data):
             dst.co = mathutils.Vector([
-                (trkPart.x + src.x) * -scale,
-                (trkPart.z + src.z) * scale,
-                (trkPart.y + src.y) * scale
+                src.x * -scale,
+                src.z * scale,
+                src.y * scale
             ])
             color.color = [
                 src.r / 256,
@@ -297,11 +297,10 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
                 1
             ]
 
-        # vertex color
+        # set edges/faces
         vertex_indices = list(chain.from_iterable(faces))
         loop_starts = list(islice(chain([0], accumulate(face_lengths)), len(faces)))
 
-        me.polygons.foreach_set("loop_total", face_lengths)
         me.polygons.foreach_set("loop_start", loop_starts)
         me.polygons.foreach_set("vertices", vertex_indices)
         
@@ -313,12 +312,18 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
         j = 0
         for p, f in zip(me.polygons, trkPart.faces):
             # set textures
-            uvtex.uv[j+0].vector = [f.ta_x / 256, (256 - f.ta_y) / 256]
-            uvtex.uv[j+1].vector = [f.tb_x / 256, (256 - f.tb_y) / 256]
-            uvtex.uv[j+2].vector = [f.tc_x / 256, (256 - f.tc_y) / 256]
-            uvtex.uv[j+3].vector = [f.td_x / 256, (256 - f.td_y) / 256]
+            uvtex.uv[j+0].vector = [(f.ta_x+1) / 256, (256 - f.ta_y-1) / 256]
+            uvtex.uv[j+1].vector = [(f.tb_x+1) / 256, (256 - f.tb_y-1) / 256]
+            uvtex.uv[j+2].vector = [(f.tc_x+1) / 256, (256 - f.tc_y-1) / 256]
+            uvtex.uv[j+3].vector = [(f.td_x+1) / 256, (256 - f.td_y-1) / 256]
             j += 4
             p.material_index = f.tpage
+
+        ob.location = mathutils.Vector([
+            trkPart.x * -scale,
+            trkPart.z * scale,
+            trkPart.y * scale
+        ])
         
         new_objects.append(ob)
 
@@ -341,7 +346,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
             new_objects.append(ob2)
         
     # Decoration parts
-    '''for i, decoPart in enumerate(srt.decoparts):
+    for i, decoPart in enumerate(srt.decoparts):
         # create a new mesh
         me = bpy.data.meshes.new(f"Deco.{i}") 
         ob = bpy.data.objects.new(f"Deco.{i}", me)
@@ -349,82 +354,76 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
         # add all materials to mesh
         for material in materials:
             me.materials.append(material)
-        
-        faces = []
-
-        # parse verts (list of tuples of coordinates)
-        verts = list(zip(*[iter(x['FaceVtxs'])] * 3))
-
-        # parse vtx colors
-        tints = list(zip(*[iter(x['ColorVtxs'])] * 3))
-            
-        # parse textures
-        texs = list(zip(*[iter(x['TriTexVtxs']+x['QuadTexVtxs'])] * 2))
-
-        # parse faces (list of tuples of vertex indices)
-        faces = list(zip(*[iter(x['TriIdxs'])] * 3)) + \
-            list(zip(*[iter(x['QuadIdxs'])] * 4))
-
-        #print("Verts and faces parsed!")
-        #print("V: ", verts, len(verts))
-        #print("F: ", faces, len(faces))
-        #print("T: ", tints, len(tints))
 
         # to mesh
-        face_lengths = tuple(map(len, faces))
+        me.vertices.add(decoPart.num_vtxs)
+        me.loops.add(3 * decoPart.num_tris + 4 * decoPart.num_quads)
+        me.polygons.add(decoPart.num_tris + decoPart.num_quads)
+        colormap = ob.data.color_attributes.new(
+            name='',
+            type='FLOAT_COLOR',
+            domain='POINT'
+        )
 
-        me.vertices.add(len(verts))
-        me.loops.add(sum(face_lengths))
-        me.polygons.add(len(faces))
-        uvtex = me.uv_textures.new()
-        colormap = me.vertex_colors.new()
+        # vertices
+        for src, dst, color in zip(decoPart.vtxs, me.vertices, colormap.data):
+            dst.co = mathutils.Vector([
+                src.x * -scale,
+                src.z * scale,
+                src.y * scale
+            ])
+            color.color = [
+                src.r / 256,
+                src.g / 256,
+                src.b / 256,
+                1
+            ]
 
-        me.vertices.foreach_set("co", tuple(chain.from_iterable(verts)))
-        #me.vertex_colors.foreach_set("co", tuple(chain.from_iterable(tints)))
+        # triangles
+        for j, f in enumerate(decoPart.tris):
+            p = me.polygons[j]
+            p.loop_start = j * 3
+            p.material_index = f.tpage
+        # quads
+        for j, f in enumerate(decoPart.quads):
+            p = me.polygons[decoPart.num_tris + j]
+            p.loop_start = (decoPart.num_tris * 3) + (j * 4)
+            p.material_index = f.tpage
 
-        vertex_indices = tuple(chain.from_iterable(faces))
-        loop_starts = tuple(islice(chain([0], accumulate(face_lengths)), len(faces)))
-        
-        #print("Indices set!")
-        #print(vertex_indices)
-        #print(loop_starts)
+        # Face vertices
+        # note: cannot set loop_total directly; is derived from loop_start
+        for j, f in enumerate(decoPart.tris):
+            p = me.polygons[j]
+            p.vertices = [f.a, f.b, f.c]
+        for j, f in enumerate(decoPart.quads):
+            p = me.polygons[decoPart.num_tris + j]
+            p.vertices = [f.a, f.b, f.c, f.d]
 
-        me.polygons.foreach_set("loop_total", face_lengths)
-        me.polygons.foreach_set("loop_start", loop_starts)
-        me.polygons.foreach_set("vertices", vertex_indices)
+        # Texture coords
+        # must be created after polygons; otherwise Blender crashes
+        uvtex = me.uv_layers.new()
+        for j, f in enumerate(decoPart.tris):
+            uvtex.uv[(j*3)+0].vector = [(f.ta_x+1) / 256, (256 - f.ta_y-1) / 256]
+            uvtex.uv[(j*3)+1].vector = [(f.tb_x+1) / 256, (256 - f.tb_y-1) / 256]
+            uvtex.uv[(j*3)+2].vector = [(f.tc_x+1) / 256, (256 - f.tc_y-1) / 256]
+
+        for j, f in enumerate(decoPart.quads):
+            uvtex.uv[(decoPart.num_tris*3)+(j*4)+0].vector = [(f.ta_x+1) / 256, (256 - f.ta_y-1) / 256]
+            uvtex.uv[(decoPart.num_tris*3)+(j*4)+1].vector = [(f.tb_x+1) / 256, (256 - f.tb_y-1) / 256]
+            uvtex.uv[(decoPart.num_tris*3)+(j*4)+2].vector = [(f.tc_x+1) / 256, (256 - f.tc_y-1) / 256]
+            uvtex.uv[(decoPart.num_tris*3)+(j*4)+3].vector = [(f.td_x+1) / 256, (256 - f.td_y-1) / 256]
         
         # no edges - calculate them
-        me.update(calc_edges=True, calc_tessface=True)
+        me.update(calc_edges=True)
         me.validate()
 
-        # set colors
-        j = 0
-        pc = 0
-        
-        for p in me.polygons:
-            for i in p.loop_indices:
-                
-                # Set colors
-                vIdx = me.loops[i].vertex_index
-                #print(vIdx)
-                tint = tints[vIdx]
-                colormap.data[j].color = tint
-                
-                # Set textures
-                me.uv_layers[0].data[j].uv = texs[j]
-                
-                j += 1
-            p.material_index = (x['TriTexPages']+x['QuadTexPages'])[pc]
-            pc += 1 
-            
-        #print(len(colormap.data), j, sum(face_lengths))
+        ob.location = mathutils.Vector([
+            decoPart.x * -scale,
+            decoPart.z * scale,
+            decoPart.y * scale
+        ])
 
-        # no edges - calculate them
-        #me.update(calc_edges=True)
-        #me.validate()
-        
-        ob = bpy.data.objects.new("Deco", me)
-        new_objects.append(ob)'''
+        new_objects.append(ob)
         
     return new_objects
 
@@ -445,6 +444,14 @@ def loadTrk(context, filepath):
     
     for o in objlist:
         scn.collection.objects.link(o)
+        if o.name.startswith("Deco"):
+            # autofix weird UV issues with deco parts
+            # TODO: very resource intensive. find way to avoid this
+            bpy.context.view_layer.objects.active = o
+            bpy.ops.object.mode_set(mode = 'EDIT')
+            bpy.ops.object.mode_set(mode = 'OBJECT')
+
+    for o in objlist:
         o.select_set(True)
 
     # Disable color space calculations
