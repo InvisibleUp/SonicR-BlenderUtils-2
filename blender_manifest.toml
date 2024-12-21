@@ -1,0 +1,33 @@
+schema_version = "1.0.0"
+
+id = "SonicR_Track_Import"
+version = "2.0.0"
+name = "Sonic R Track Importer"
+tagline = "Imports Sonic R track files"
+maintainer = "InvisibleUp <invisibleup@outlook.com>"
+type = "add-on"
+
+# # Optional: link to documentation, support, source files, etc
+# website = "https://extensions.blender.org/add-ons/my-example-package/"
+
+# # Optional: tag list defined by Blender and server, see:
+# # https://docs.blender.org/manual/en/dev/advanced/extensions/tags.html
+tags = ["Import-Export"]
+
+blender_version_min = "4.2.0"
+# # Optional: Blender version that the extension does not support, earlier versions are supported.
+# # This can be omitted and defined later on the extensions platform if an issue is found.
+# blender_version_max = "5.1.0"
+
+# License conforming to https://spdx.org/licenses/ (use "SPDX: prefix)
+# https://docs.blender.org/manual/en/dev/advanced/extensions/licenses.html
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+
+wheels = [
+  "./wheels/kaitaistruct-0.10-py2.py3-none-any.whl"
+]
+
+[permissions]
+files = "Import Sonic R tracks and associated files from disk"

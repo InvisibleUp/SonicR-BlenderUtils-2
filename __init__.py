@@ -21,28 +21,17 @@
 import bpy
 from pathlib import Path
 from itertools import *
+from importlib import resources
 import json
 from bpy.props import StringProperty, FloatProperty
-from bpy_extras.io_utils import ImportHelper, orientation_helper_factory
+from bpy_extras.io_utils import ImportHelper, orientation_helper
 import mathutils
 from kaitaistruct import KaitaiStream
-from kaitaidefs import *
+from .kaitaidefs.srt import Srt
+from . import trackmeta
 
-bl_info = {
-    "name": "Sonic R Importers",
-    "author": "InvisibleUp",
-    "version": (2, 0),
-    "blender": (4, 0, 0),
-    "location": "File > Import-Export",
-    "description": "Imports Sonic R model files.",
-    "warning": "",
-    "wiki_url": "",
-    "category": "Import-Export",
-}
-
-IOOBJOrientationHelper = orientation_helper_factory("IOOBJOrientationHelper", axis_forward='-Z', axis_up='Y')
-class ImportSRT(bpy.types.Operator, ImportHelper, IOOBJOrientationHelper):
-    bl_idname = "import_scene.srt"
+class SONICR_OP_ImportTrk(bpy.types.Operator, ImportHelper):
+    bl_idname = "sonicr.import_trk"
     bl_label = "Import Sonic R Track"
     bl_options = {'PRESET', 'UNDO'}
 
@@ -54,8 +43,8 @@ class ImportSRT(bpy.types.Operator, ImportHelper, IOOBJOrientationHelper):
 
     global_scale = FloatProperty(
         name="Scale",
-        min=0.01, max=1000.0,
-        default=1.0,
+        min=0.0001, max=1.0,
+        default=0.01,
     )
 
     def execute(self, context):
@@ -65,22 +54,26 @@ class ImportSRT(bpy.types.Operator, ImportHelper, IOOBJOrientationHelper):
         return loadTrk(context, **keywords)
 
 def menu_func_import(self, context):
-    self.layout.operator(ImportSRT.bl_idname, text="Sonic R Track (.bin)")
+    self.layout.operator(SONICR_OP_ImportTrk.bl_idname, text="Sonic R Track (.bin)")
 
 def register():
-    bpy.utils.register_module(__name__)
-    bpy.types.INFO_MT_file_import.append(menu_func_import)
+    bpy.utils.register_class(SONICR_OP_ImportTrk)
+    bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
 
 def unregister():
-    bpy.utils.unregister_module(__name__)
-    bpy.types.INFO_MT_file_import.remove(menu_func_import)
+    bpy.utils.unregister_class(SONICR_OP_ImportTrk)
+    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
 
 if __name__ == "__main__":
     register()
 
 def makeImage(name, path):
-    image = bpy.data.images.load(path)
-    image.name = name
+    try:
+        image = bpy.data.images.load(path)
+        image.name = name
+    except RuntimeError:
+        # texture not found. oh well.
+        image = bpy.data.images.new(name, 256, 256)
     return image
 
 ''' Generate a material for a given texture '''
@@ -235,18 +228,19 @@ def createAllMaterials(texlist):
         materials.append(makeMaterial(name, image))
     return materials
 
-def convertTrk(srt: Srt, metadata):
+def convertTrk(srt: Srt, metadata: dict):
     new_objects = []  # put new objects here
-    materials = createAllMaterials(metadata.textures)
+    #materials = createAllMaterials(metadata['textures'])
     
-    for trkPart in srt.trkparts:
+    for i, trkPart in enumerate(srt.trkparts):
+        print(f"Trk{i}")
         # create a new mesh
-        me = bpy.data.meshes.new("Trk") 
-        ob = bpy.data.objects.new("Trk", me)
+        me = bpy.data.meshes.new(f"Trk{i}") 
+        ob = bpy.data.objects.new(f"Trk{i}", me)
         
         # add all materials to mesh
-        for material in materials:
-            me.materials.append(material)
+        #for material in materials:
+        #    me.materials.append(material)
 
         faces = []
 
@@ -268,20 +262,23 @@ def convertTrk(srt: Srt, metadata):
         me.vertices.add(trkPart.num_vtxs)
         me.loops.add(sum(face_lengths))
         me.polygons.add(trkPart.num_faces)
-        uvtex = me.uv_layers.new()
-        colormap = me.data.color_attributes.new(
+        #uvtex = me.uv_layers.new()
+        colormap = ob.data.color_attributes.new(
             name='',
             type='BYTE_COLOR',
             domain='POINT'
         )
 
+        scale = 0.01
         for src, dst, color in zip(trkPart.vtxs, me.vertices, colormap.data):
-            dst.co = mathutils.Vector(src.x, src.y, src.z)
-            color.data.color = [src.r, src.g, src.b, 1]
+            dst.co = mathutils.Vector([
+                (trkPart.x + src.x) * -scale,
+                (trkPart.z + src.z) * scale,
+                (trkPart.y + src.y) * scale
+            ])
+            color.color = [src.r, src.g, src.b, 1]
 
         # vertex color
-        me.vertices.foreach_set("")
-
         vertex_indices = list(chain.from_iterable(faces))
         loop_starts = list(islice(chain([0], accumulate(face_lengths)), len(faces)))
 
@@ -290,18 +287,17 @@ def convertTrk(srt: Srt, metadata):
         me.polygons.foreach_set("vertices", vertex_indices)
         
         # no edges - calculate them
-        me.update(calc_edges=True, calc_tessface=True)
+        me.update(calc_edges=True)
         me.validate()
 
-        for p, f in zip(me.polygons, trkPart.faces):
+        '''for p, f in zip(me.polygons, trkPart.faces):
             # set textures
             uvtex.uv[0].vector = [f.ta_x, f.ta_y]
             uvtex.uv[1].vector = [f.tb_x, f.tb_y]
             uvtex.uv[2].vector = [f.tc_x, f.tb_y]
             uvtex.uv[3].vector = [f.td_x, f.tb_y]
-            p.material_index = f.tpage
+            p.material_index = f.tpage'''
         
-        ob = bpy.data.objects.new("Trk", me)
         new_objects.append(ob)
         
     # Decoration parts
@@ -400,17 +396,18 @@ def loadTrk(context, filepath):
         stream = KaitaiStream(f)
         track = Srt(stream)
 
-    with open('./trackmeta/island.json', mode='r') as f:
+    metadata_file = (resources.files(trackmeta)) / "island.json"
+    with open(metadata_file, mode='r') as f:
         metadata = json.load(f)
 
     objlist = convertTrk(track, metadata)
     scn = bpy.context.scene
     
     for o in scn.objects:
-        o.select = False
+        o.select_set(False)
     
     for o in objlist:
-        scn.objects.link(o)
-        o.select = True
+        scn.collection.objects.link(o)
+        o.select_set(True)
 
     return {'FINISHED'}
