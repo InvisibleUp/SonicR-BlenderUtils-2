@@ -246,13 +246,14 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
     new_objects = []  # put new objects here
     rootPath = Path(filepath).parent
     materials = createAllMaterials(metadata['textures'], rootPath)
+    scale = 0.01
     
     for i, trkPart in enumerate(srt.trkparts):
-        print(f"Trk{i}")
-        # create a new mesh
-        me = bpy.data.meshes.new(f"Trk{i}") 
-        ob = bpy.data.objects.new(f"Trk{i}", me)
-        
+
+        # Track mesh
+        me = bpy.data.meshes.new(f"Trk.{i}") 
+        ob = bpy.data.objects.new(f"Trk.{i}", me)
+
         # add all materials to mesh
         for material in materials:
             me.materials.append(material)
@@ -260,7 +261,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
         faces = []
 
         # parse faces (list of tuples of vertex indices)
-        for i, f in enumerate(
+        for j, f in enumerate(
             zip(
                 range(0, len(trkPart.vtxs)),
                 range(2, len(trkPart.vtxs)),
@@ -268,7 +269,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
                 range(1, len(trkPart.vtxs)),
             )
         ):
-            if i % 2 == 1: continue
+            if j % 2 == 1: continue
             faces.append(list(f))
 
         # to mesh
@@ -283,7 +284,6 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
             domain='POINT'
         )
 
-        scale = 0.01
         for src, dst, color in zip(trkPart.vtxs, me.vertices, colormap.data):
             dst.co = mathutils.Vector([
                 (trkPart.x + src.x) * -scale,
@@ -321,21 +321,36 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
             p.material_index = f.tpage
         
         new_objects.append(ob)
+
+        # Track sub-objects (usually, but not always, rings)
+        if len(trkPart.objs) > 1: 
+            me2 = bpy.data.meshes.new(f"Trk.{i}.Objects") 
+            ob2 = bpy.data.objects.new(f"Trk.{i}.Objects", me2)
+            me2.attributes.new(name="objectType", type="INT8", domain="POINT")
+
+            me2.vertices.add(len(trkPart.objs) - 1)
+            for j, subobj in enumerate(trkPart.objs):
+                if subobj.objtype == -1: break
+                me2.vertices[j].co = mathutils.Vector([
+                    subobj.x * -scale,
+                    subobj.z * scale,
+                    subobj.y * scale
+                ])
+                me2.attributes['objectType'].data[j].value = subobj.objtype
+
+            new_objects.append(ob2)
         
     # Decoration parts
-    '''for a in range(0, len(DecoParts)):
+    '''for i, decoPart in enumerate(srt.decoparts):
         # create a new mesh
-        me = bpy.data.meshes.new("Deco") 
-        ob = bpy.data.objects.new("Deco", me)
+        me = bpy.data.meshes.new(f"Deco.{i}") 
+        ob = bpy.data.objects.new(f"Deco.{i}", me)
         
         # add all materials to mesh
         for material in materials:
             me.materials.append(material)
         
-        verts = []
-        tints = []
         faces = []
-        x = DecoParts[a]
 
         # parse verts (list of tuples of coordinates)
         verts = list(zip(*[iter(x['FaceVtxs'])] * 3))
