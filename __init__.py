@@ -86,6 +86,7 @@ def makeMaterial(name, image):
     material.color_tag = 'NONE'
     material.description = ""
     material.default_group_node_width = 140
+    material.nodes.clear()
 
     #material interface
 
@@ -166,19 +167,27 @@ def makeMaterial(name, image):
     mix_alpha.label = "Mix Alpha"
     mix_alpha.name = "Mix Alpha"
 
+    #node Environment Color
+    environment_color = material.nodes.new("ShaderNodeVectorMath")
+    environment_color.label = "Environment Color"
+    environment_color.name = "Environment Color"
+    environment_color.operation = 'ADD'
+    # TODO: set
+    environment_color.inputs[1].default_value = (0, 0, 0)
 
     #Set locations
     texture_coordinate.location = (-752.1420288085938, 172.89166259765625)
     light_path.location = (215.29904174804688, 576.9533081054688)
     emit_only_to_camera.location = (471.49346923828125, 344.90069580078125)
     material_output.location = (703.8551025390625, 367.49798583984375)
-    color_attribute.location = (-746.0689697265625, 411.94573974609375)
+    color_attribute.location = (-947.4661865234375, 401.4444274902344)
     add_vertex_color.location = (-252.72947692871094, 380.2495422363281)
-    adjust_vertex_color.location = (-502.159423828125, 463.3686218261719)
+    adjust_vertex_color.location = (-703.556640625, 452.8673095703125)
     image_texture.location = (-555.6151123046875, 191.15330505371094)
     transparent_bsdf.location = (-37.10700988769531, 387.06463623046875)
     emission.location = (-38.904380798339844, 288.57635498046875)
     mix_alpha.location = (215.2847900390625, 231.6190643310547)
+    environment_color.location = (-476.5963134765625, 448.4853210449219)
 
     #Set dimensions
     texture_coordinate.width, texture_coordinate.height = 140.0, 100.0
@@ -192,6 +201,7 @@ def makeMaterial(name, image):
     transparent_bsdf.width, transparent_bsdf.height = 140.0, 100.0
     emission.width, emission.height = 140.0, 100.0
     mix_alpha.width, mix_alpha.height = 140.0, 100.0
+    environment_color.width, environment_color.height = 140.0, 100.0
 
     #initialize material links
     #light_path.Is Camera Ray -> emit_only_to_camera.Fac
@@ -214,23 +224,26 @@ def makeMaterial(name, image):
     material.links.new(transparent_bsdf.outputs[0], mix_alpha.inputs[1])
     #emission.Emission -> mix_alpha.Shader
     material.links.new(emission.outputs[0], mix_alpha.inputs[2])
-    #adjust_vertex_color.Vector -> add_vertex_color.Vector
-    material.links.new(adjust_vertex_color.outputs[0], add_vertex_color.inputs[0])
+    #adjust_vertex_color.Vector -> environment_color.Vector
+    material.links.new(adjust_vertex_color.outputs[0], environment_color.inputs[0])
+    #environment_color.Vector -> add_vertex_color.Vector
+    material.links.new(environment_color.outputs[0], add_vertex_color.inputs[0])
     
     return mat
 
-def createAllMaterials(texlist):
+def createAllMaterials(texlist, rootPath: Path):
     # Create required materials
     materials = []
     for path in texlist:
         name = Path(path).stem
-        image = makeImage(name, path)
+        image = makeImage(name, str(rootPath.joinpath(path)))
         materials.append(makeMaterial(name, image))
     return materials
 
-def convertTrk(srt: Srt, metadata: dict):
+def convertTrk(srt: Srt, metadata: dict, filepath: str):
     new_objects = []  # put new objects here
-    #materials = createAllMaterials(metadata['textures'])
+    rootPath = Path(filepath).parent
+    materials = createAllMaterials(metadata['textures'], rootPath)
     
     for i, trkPart in enumerate(srt.trkparts):
         print(f"Trk{i}")
@@ -239,8 +252,8 @@ def convertTrk(srt: Srt, metadata: dict):
         ob = bpy.data.objects.new(f"Trk{i}", me)
         
         # add all materials to mesh
-        #for material in materials:
-        #    me.materials.append(material)
+        for material in materials:
+            me.materials.append(material)
 
         faces = []
 
@@ -262,10 +275,10 @@ def convertTrk(srt: Srt, metadata: dict):
         me.vertices.add(trkPart.num_vtxs)
         me.loops.add(sum(face_lengths))
         me.polygons.add(trkPart.num_faces)
-        #uvtex = me.uv_layers.new()
+        uvtex = me.uv_layers.new()
         colormap = ob.data.color_attributes.new(
             name='',
-            type='BYTE_COLOR',
+            type='FLOAT_COLOR',
             domain='POINT'
         )
 
@@ -276,7 +289,12 @@ def convertTrk(srt: Srt, metadata: dict):
                 (trkPart.z + src.z) * scale,
                 (trkPart.y + src.y) * scale
             ])
-            color.color = [src.r, src.g, src.b, 1]
+            color.color = [
+                src.r / 256,
+                src.g / 256,
+                src.b / 256,
+                1
+            ]
 
         # vertex color
         vertex_indices = list(chain.from_iterable(faces))
@@ -290,15 +308,18 @@ def convertTrk(srt: Srt, metadata: dict):
         me.update(calc_edges=True)
         me.validate()
 
-        '''for p, f in zip(me.polygons, trkPart.faces):
+        j = 0
+        for p, f in zip(me.polygons, trkPart.faces):
             # set textures
-            uvtex.uv[0].vector = [f.ta_x, f.ta_y]
-            uvtex.uv[1].vector = [f.tb_x, f.tb_y]
-            uvtex.uv[2].vector = [f.tc_x, f.tb_y]
-            uvtex.uv[3].vector = [f.td_x, f.tb_y]
-            p.material_index = f.tpage'''
+            uvtex.uv[j+0].vector = [f.ta_x / 256, (256 - f.ta_y) / 256]
+            uvtex.uv[j+1].vector = [f.tb_x / 256, (256 - f.tb_y) / 256]
+            uvtex.uv[j+2].vector = [f.tc_x / 256, (256 - f.tc_y) / 256]
+            uvtex.uv[j+3].vector = [f.td_x / 256, (256 - f.td_y) / 256]
+            j += 4
+            p.material_index = f.tpage
         
         new_objects.append(ob)
+        break
         
     # Decoration parts
     '''for a in range(0, len(DecoParts)):
@@ -400,7 +421,7 @@ def loadTrk(context, filepath):
     with open(metadata_file, mode='r') as f:
         metadata = json.load(f)
 
-    objlist = convertTrk(track, metadata)
+    objlist = convertTrk(track, metadata, filepath)
     scn = bpy.context.scene
     
     for o in scn.objects:
