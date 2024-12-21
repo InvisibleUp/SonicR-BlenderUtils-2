@@ -329,21 +329,21 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
 
         # Track sub-objects (usually, but not always, rings)
         if len(trkPart.objs) > 1: 
-            me2 = bpy.data.meshes.new(f"Trk.{i}.Objects") 
-            ob2 = bpy.data.objects.new(f"Trk.{i}.Objects", me2)
-            me2.attributes.new(name="objectType", type="INT8", domain="POINT")
+            me = bpy.data.meshes.new(f"Trk.{i}.Objects") 
+            ob = bpy.data.objects.new(f"Trk.{i}.Objects", me)
+            me.attributes.new(name="objectType", type="INT8", domain="POINT")
 
-            me2.vertices.add(len(trkPart.objs) - 1)
+            me.vertices.add(len(trkPart.objs) - 1)
             for j, subobj in enumerate(trkPart.objs):
                 if subobj.objtype == -1: break
-                me2.vertices[j].co = mathutils.Vector([
+                me.vertices[j].co = mathutils.Vector([
                     subobj.x * -scale,
                     subobj.z * scale,
                     subobj.y * scale
                 ])
-                me2.attributes['objectType'].data[j].value = subobj.objtype
+                me.attributes['objectType'].data[j].value = subobj.objtype
 
-            new_objects.append(ob2)
+            new_objects.append(ob)
         
     # Decoration parts
     for i, decoPart in enumerate(srt.decoparts):
@@ -424,7 +424,94 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
         ])
 
         new_objects.append(ob)
-        
+
+    # path points
+    me = bpy.data.meshes.new("PathPoints") 
+    ob = bpy.data.objects.new("PathPoints", me)
+    me.vertices.add(srt.num_pathpoints)
+    for j, subobj in enumerate(srt.pathpoints):
+        me.vertices[j].co = mathutils.Vector([
+            subobj.x * -scale,
+            subobj.z * scale,
+            subobj.y * scale
+        ])
+    new_objects.append(ob)
+
+    # intro points
+    '''me = bpy.data.meshes.new("IntroPoints") 
+    ob = bpy.data.objects.new("IntroPoints", me)
+    me.vertices.add(srt.num_intropoints)
+    for j, subobj in enumerate(srt.intropoints):
+        me.vertices[j].co = mathutils.Vector([
+            subobj.x * -scale,
+            subobj.z * scale,
+            subobj.y * scale
+        ])
+    new_objects.append(ob)'''
+
+    # sec5
+    '''me = bpy.data.meshes.new("Sec5") 
+    ob = bpy.data.objects.new("Sec5", me)
+    me.vertices.add(srt.num_sec5)
+    for j, subobj in enumerate(srt.sec5):
+        me.vertices[j].co = mathutils.Vector([
+            subobj.x * -scale,
+            subobj.z * scale,
+            subobj.y * scale
+        ])
+    new_objects.append(ob)'''
+
+    # main path points
+    me = bpy.data.meshes.new("MainPathPoints") 
+    ob = bpy.data.objects.new("MainPathPoints", me)
+    me.vertices.add(srt.num_mainpoints)
+    for j, subobj in enumerate(srt.mainpoints):
+        me.vertices[j].co = mathutils.Vector([
+            subobj.x * -scale,
+            subobj.z * scale,
+            subobj.y * scale
+        ])
+    new_objects.append(ob)
+
+    # player spawn points
+    me = bpy.data.meshes.new("SpawnPoints") 
+    ob = bpy.data.objects.new("SpawnPoints", me)
+    spawnpoints = [
+        srt.playerpos.p1_end,
+        srt.playerpos.p2_end,
+        srt.playerpos.p3_end,
+        srt.playerpos.p4_end,
+        srt.playerpos.p5_end,
+        srt.playerpos.p1_start,
+        srt.playerpos.p2_start,
+        srt.playerpos.p3_start,
+        srt.playerpos.p4_start,
+        srt.playerpos.p5_start,
+        srt.playerpos.tt_end
+    ]
+    me.vertices.add(len(spawnpoints))
+    for j, subobj in enumerate(spawnpoints):
+        me.vertices[j].co = mathutils.Vector([
+            subobj.x * -scale,
+            subobj.z * scale,
+            subobj.y * scale
+        ])
+    new_objects.append(ob)
+
+    # replay camera points
+    me = bpy.data.meshes.new("ReplayCamPoints") 
+    ob = bpy.data.objects.new("ReplayCamPoints", me)
+    me.vertices.add(srt.num_replaypos)
+    for j, subobj in enumerate(srt.replaypos):
+        me.vertices[j].co = mathutils.Vector([
+            subobj.x * -scale,
+            subobj.z * scale,
+            subobj.y * scale
+        ])
+    new_objects.append(ob)
+
+    # excluding Sec9 for now
+
     return new_objects
 
 def loadTrk(context, filepath):
