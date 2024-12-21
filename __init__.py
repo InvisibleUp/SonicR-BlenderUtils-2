@@ -74,6 +74,8 @@ def makeImage(name, path):
     except RuntimeError:
         # texture not found. oh well.
         image = bpy.data.images.new(name, 256, 256)
+    # Disable color space calculations
+    image.colorspace_settings.name = 'Non-Color'
     return image
 
 ''' Generate a material for a given texture '''
@@ -429,5 +431,8 @@ def loadTrk(context, filepath):
     for o in objlist:
         scn.collection.objects.link(o)
         o.select_set(True)
+
+    # Disable color space calculations
+    bpy.context.scene.view_settings.view_transform = 'Raw'
 
     return {'FINISHED'}
