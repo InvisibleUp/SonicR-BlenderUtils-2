@@ -512,6 +512,62 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
 
     # excluding Sec9 for now
 
+    # floormap
+    floor_image = makeImage("FloorMap", str(rootPath.joinpath(metadata['floormap']['image'])))
+    floor_material = makeMaterial("FloorMap", floor_image)
+    me = bpy.data.meshes.new("FloorMap") 
+    ob = bpy.data.objects.new("FloorMap", me)
+
+    me.materials.append(floor_material)
+    me.vertices.add(4)
+    me.loops.add(4)
+    me.polygons.add(1)
+    colormap = ob.data.color_attributes.new(
+        name='',
+        type='FLOAT_COLOR',
+        domain='POINT'
+    )
+
+    me.vertices[0].co = mathutils.Vector([
+        metadata['floormap']['x1'] * metadata['floormap']['scale'] * -scale,
+        metadata['floormap']['y1'] * metadata['floormap']['scale'] * -scale,
+        0
+    ])
+    me.vertices[1].co = mathutils.Vector([
+        metadata['floormap']['x2'] * metadata['floormap']['scale'] * -scale,
+        metadata['floormap']['y1'] * metadata['floormap']['scale'] * -scale,
+        0
+    ])
+    me.vertices[2].co = mathutils.Vector([
+        metadata['floormap']['x2'] * metadata['floormap']['scale'] * -scale,
+        metadata['floormap']['y2'] * metadata['floormap']['scale'] * -scale,
+        0
+    ])
+    me.vertices[3].co = mathutils.Vector([
+        metadata['floormap']['x1'] * metadata['floormap']['scale'] * -scale,
+        metadata['floormap']['y2'] * metadata['floormap']['scale'] * -scale,
+        0
+    ])
+
+    colormap.data[0].color = [0.5, 0.5, 0.5, 1]
+    colormap.data[1].color = [0.5, 0.5, 0.5, 1]
+    colormap.data[2].color = [0.5, 0.5, 0.5, 1]
+    colormap.data[3].color = [0.5, 0.5, 0.5, 1]
+
+    me.polygons[0].vertices = [0, 1, 2, 3]
+
+    uvtex = me.uv_layers.new()
+    uvtex.uv[0].vector = [0, 0]
+    uvtex.uv[1].vector = [1, 0]
+    uvtex.uv[2].vector = [1, 1]
+    uvtex.uv[3].vector = [0, 1]
+
+    # no edges - calculate them
+    me.update(calc_edges=True)
+    me.validate()
+
+    new_objects.append(ob)
+
     return new_objects
 
 def loadTrk(context, filepath):

@@ -35,6 +35,14 @@
         "general/plop.png",
         "island/island06.png"
     ],
+    "floormap": {
+        "image": "island/islandfloor.png",
+        "x1": -476.8025,
+        "x2": 631.40845,
+        "y1": -564.62445,
+        "y2": 543.5865,
+        "scale": 25.0
+    },
     "global_color": {
         "clear": {
             "sunset": {
