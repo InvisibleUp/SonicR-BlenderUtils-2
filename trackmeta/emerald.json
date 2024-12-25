@@ -1,0 +1,21 @@
+{
+    "name": "Radiant Emerald",
+    "file_trk": "emerald/emrald_b.bin",
+    "file_col": "bin/extras/emerald.ter",
+    "file_ai": "ai/aistuffe.bin",
+    "textures": [
+        "emerald/cas00.png",
+        "emerald/cas01.png",
+        "island/island05.png",
+        "emerald/cas02.png",
+        "island/island02.png",
+        "city/city03.png",
+        "island/island03.png"
+    ],
+    "global_color": {
+        "r": "0x80",
+        "g": "0x80",
+        "b": "0x80",
+        "sun_angle": "0x340"
+    }
+}

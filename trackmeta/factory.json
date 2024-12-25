@@ -1,0 +1,98 @@
+{
+    "name": "Reactive Factory",
+    "file_trk": "ruin/factry_e.bin",
+    "file_col": "bin/extras/factory.ter",
+    "file_ai": "ai/aistufff.bin",
+    "textures": [
+        "factory/fact00.png",
+        "factory/fact01.png",
+        "factory/fact02.png",
+        "factory/fact03.png",
+        "general/player00.png",
+        "island/island02.png",
+        "city/city03.png",
+        "island/island03.png",
+        "island/island05.png"
+    ],
+    "textures_snow": [
+        "factory/snow/fac_s_00.png",
+        "factory/snow/fac_s_01.png",
+        "factory/snow/fac_s_02.png",
+        "factory/snow/fac_s_03.png",
+        "general/player00.png",
+        "island/island02.png",
+        "city/snow/cit_s_03.png",
+        "island/snow/isl_s_03.png",
+        "island/snow/isl_s_05.png"
+    ],
+    "floormap": {
+        "image": "factory/factoryfloor.png",
+        "x1": -450.8096,
+        "x2": 445.7539,
+        "y1": -472.4747,
+        "y2": 424.0889,
+        "scale": 25.0
+    },
+    "global_color": {
+        "clear": {
+            "sunset": {
+                "r": "0xFF",
+                "g": "0x7B",
+                "b": "0x21",
+                "sun_angle": "0x67E"
+            },
+            "day": {
+                "r": "0xC7",
+                "g": "0xE0",
+                "b": "0xF3",
+                "sun_angle": "0x647"
+            },
+            "night": {
+                "r": "0x3F",
+                "g": "0x4D",
+                "b": "0x50",
+                "sun_angle": "0x5C2"
+            }
+        },
+        "rain": {
+            "sunset": {
+                "r": "0xB9",
+                "g": "0x71",
+                "b": "0x43",
+                "sun_angle": "0x670"
+            },
+            "day": {
+                "r": "0x9E",
+                "g": "0x7D",
+                "b": "0x7E",
+                "sun_angle": "0x2E8"
+            },
+            "night": {
+                "r": "0x79",
+                "g": "0x69",
+                "b": "0x75",
+                "sun_angle": "0x7EA"
+            }
+        },
+        "snow": {
+            "sunset": {
+                "r": "0xFF",
+                "g": "0xC0",
+                "b": "0x95",
+                "sun_angle": "0x6CA"
+            },
+            "day": {
+                "r": "0xE5",
+                "g": "0xCB",
+                "b": "0xC3",
+                "sun_angle": "0x70C"
+            },
+            "night": {
+                "r": "0x36",
+                "g": "0x27",
+                "b": "0x40",
+                "sun_angle": "0x269"
+            }
+        }
+    }
+}

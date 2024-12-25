@@ -1,0 +1,23 @@
+{
+    "name": "TITLES3",
+    "file_trk": "bin/option/option3.bin",
+    "textures": [
+        "ruin/ruin00.png",
+        "ruin/ruin03.png",
+        "ruin/ruin01.png",
+        "factory/fact00.png",
+        "factory/fact01.png",
+        "factory/fact02.png",
+        "island/island01.png",
+        "island/island04.png",
+        "island/island03.png",
+        "island/island02.png",
+        "city/city02.png",
+        "city/city00.png",
+        "emerald/cas00.png",
+        "bin/option/option00.png",
+        "general/player00.png",
+        "general/player01.png",
+        "general/icon01.png"
+    ]
+}

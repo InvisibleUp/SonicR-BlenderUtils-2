@@ -1,0 +1,100 @@
+{
+    "name": "Regal Ruin",
+    "file_trk": "ruin/ruin_d.bin",
+    "file_col": "bin/extras/ruin.ter",
+    "file_ai": "ai/aistuffr.bin",
+    "textures": [
+        "ruin/ruin00.png",
+        "ruin/ruin01.png",
+        "ruin/ruin02.png",
+        "ruin/ruin03.png",
+        "ruin/ruin04.png",
+        "general/player00.png",
+        "island/island05.png",
+        "island/island02.png",
+        "city/city03.png",
+        "island/island03.png"
+    ],
+    "textures_snow": [
+        "ruin/snow/rui_s_00.png",
+        "ruin/snow/rui_s_01.png",
+        "ruin/snow/rui_s_02.png",
+        "ruin/snow/rui_s_03.png",
+        "ruin/ruin04.png",
+        "general/player00.png",
+        "island/snow/isl_s_05.png",
+        "island/island02.png",
+        "city/snow/cit_s_03.png",
+        "island/snow/isl_s_03.png"
+    ],
+    "floormap": {
+        "image": "ruin/ruinfloor.png",
+        "x1": -366.7468,
+        "x2": 192.39217,
+        "y1": -279.3009,
+        "y2": 279.8381,
+        "scale": 30.0
+    },
+    "global_color": {
+        "clear": {
+            "sunset": {
+                "r": "0xFF",
+                "g": "0xC5",
+                "b": "0x6F",
+                "sun_angle": "0x838"
+            },
+            "day": {
+                "r": "0x63",
+                "g": "0xB3",
+                "b": "0xFE",
+                "sun_angle": "0x680"
+            },
+            "night": {
+                "r": "0x13",
+                "g": "0x2E",
+                "b": "0x0B",
+                "sun_angle": "0x670"
+            }
+        },
+        "rain": {
+            "sunset": {
+                "r": "0x51",
+                "g": "0x3C",
+                "b": "0x5B",
+                "sun_angle": "0xC29"
+            },
+            "day": {
+                "r": "0xEA",
+                "g": "0xE4",
+                "b": "0xCC",
+                "sun_angle": "0x88C"
+            },
+            "night": {
+                "r": "0x41",
+                "g": "0x40",
+                "b": "0x6D",
+                "sun_angle": "0x7F4"
+            }
+        },
+        "snow": {
+            "sunset": {
+                "r": "0x9A",
+                "g": "0x79",
+                "b": "0x99",
+                "sun_angle": "0x4DC"
+            },
+            "day": {
+                "r": "0xBA",
+                "g": "0xDC",
+                "b": "0xF9",
+                "sun_angle": "0x7A8"
+            },
+            "night": {
+                "r": "0x30",
+                "g": "0x2E",
+                "b": "0x16",
+                "sun_angle": "0x44F"
+            }
+        }
+    }
+}
