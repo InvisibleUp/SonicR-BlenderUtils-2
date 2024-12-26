@@ -35,6 +35,23 @@
         "y2": 279.8381,
         "scale": 30.0
     },
+    "bg": {
+        "clear": {
+            "sunset": "ruin/parallax/_r_dd.raw",
+            "night": "ruin/parallax/_r_n.raw",
+            "day": "ruin/parallax/_r.raw"
+        },
+        "rain": {
+            "sunset": "ruin/parallax/_r_r_dd.raw",
+            "night": "ruin/parallax/_r_r_n.raw",
+            "day": "ruin/parallax/_r_r.raw"
+        },
+        "snow": {
+            "sunset": "ruin/parallax/_r_s_dd.raw",
+            "night": "ruin/parallax/_r_s_n.raw",
+            "day": "ruin/parallax/_r_s.raw"
+        }
+    },
     "global_color": {
         "clear": {
             "sunset": {

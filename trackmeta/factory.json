@@ -33,6 +33,23 @@
         "y2": 424.0889,
         "scale": 25.0
     },
+    "bg": {
+        "clear": {
+            "sunset": "factory/parallax/_f_dd.raw",
+            "night": "factory/parallax/_f_n.raw",
+            "day": "factory/parallax/_f.raw"
+        },
+        "rain": {
+            "sunset": "factory/parallax/_f_r_dd.raw",
+            "night": "factory/parallax/_f_r_n.raw",
+            "day": "factory/parallax/_f_r.raw"
+        },
+        "snow": {
+            "sunset": "factory/parallax/_f_s_dd.raw",
+            "night": "factory/parallax/_f_s_n.raw",
+            "day": "factory/parallax/_f_s.raw"
+        }
+    },
     "global_color": {
         "clear": {
             "sunset": {

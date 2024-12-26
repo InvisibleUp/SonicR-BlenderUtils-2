@@ -17,5 +17,6 @@
         "g": "0x80",
         "b": "0x80",
         "sun_angle": "0x340"
-    }
+    },
+    "bg": "emerald/parallax/_e.raw"
 }
