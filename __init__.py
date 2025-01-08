@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# https://github.com/microsoft/pylance-release/issues/5457
+# pyright: reportInvalidTypeForm=false
+
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -23,7 +26,7 @@ from pathlib import Path
 from itertools import *
 from importlib import resources
 import json
-from bpy.props import StringProperty, FloatProperty
+from bpy.props import StringProperty, EnumProperty, FloatProperty
 from bpy_extras.io_utils import ImportHelper, orientation_helper
 import mathutils
 from kaitaistruct import KaitaiStream
@@ -33,19 +36,68 @@ from . import trackmeta
 class SONICR_OP_ImportTrk(bpy.types.Operator, ImportHelper):
     bl_idname = "sonicr.import_trk"
     bl_label = "Import Sonic R Track"
-    bl_options = {'PRESET', 'UNDO'}
-
+    bl_options = {'REGISTER', 'UNDO'}
     filename_ext = ".bin"
-    filter_glob = StringProperty(
+
+    filter_glob: StringProperty(
         default="*.bin;*.srt",
         options={'HIDDEN'},
     )
 
-    global_scale = FloatProperty(
+    scale: FloatProperty(
         name="Scale",
-        min=0.0001, max=1.0,
+        min=0.0001,
+        max=1.0,
         default=0.01,
     )
+
+    trk_items = [
+        ("island",  "Resort Island",    ""),
+        ("city",    "Radical City",     ""),
+        ("ruin",    "Regal Ruin",       ""),
+        ("factory", "Reactive Factory", ""),
+        ("emerald", "Radiant Emerald",  ""),
+        ("option3", "Menu Icons",       ""),
+        ("title3",  "Title Screen",     "")
+    ]
+
+    trk: EnumProperty(
+        name="Track",
+        items=trk_items
+    )
+
+    weather_items = [
+        ("none", "None", ""),
+        ("clear", "Clear", ""),
+        ("rain", "Rain", ""),
+        ("snow", "Snow", ""),
+    ]
+
+    weather: EnumProperty(
+        name="Weather",
+        items=weather_items
+    )
+
+    tod_items =  [
+        ("none", "None", ""),
+        ("day", "Day", ""),
+        ("sunset", "Sunset", ""),
+        ("night", "Night", ""),
+    ]
+
+    tod: EnumProperty(
+        name="Time of Day",
+        items=tod_items
+    )
+
+    def draw(self, context):
+        layout = self.layout
+        #layout.use_property_split = True
+        #layout.use_property_decorate = False  # No animation
+        layout.prop(self, 'scale')
+        layout.prop(self, 'trk')
+        layout.prop(self, 'weather')
+        layout.prop(self, 'tod')
 
     def execute(self, context):
         keywords = self.as_keywords(
@@ -79,7 +131,7 @@ def makeImage(name, path):
     return image
 
 ''' Generate a material for a given texture '''
-def makeMaterial(name, image):
+def makeMaterial(name: str, image, global_color: dict, weather: str, tod: str):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
 
@@ -133,7 +185,6 @@ def makeMaterial(name, image):
     adjust_vertex_color.label = "Adjust Vertex Color"
     adjust_vertex_color.name = "Adjust Vertex Color"
     adjust_vertex_color.operation = 'ADD'
-    #Vector_001
     adjust_vertex_color.inputs[1].default_value = (-0.5, -0.5, -0.5)
 
     #node Image Texture
@@ -174,8 +225,13 @@ def makeMaterial(name, image):
     environment_color.label = "Environment Color"
     environment_color.name = "Environment Color"
     environment_color.operation = 'ADD'
-    # TODO: set
-    environment_color.inputs[1].default_value = (0, 0, 0)
+    if (weather != 'none' and tod != "none" and 'clear' in global_color):
+        r = int(global_color[tod][weather]['r'], 16) - 128
+        g = int(global_color[tod][weather]['g'], 16) - 128
+        b = int(global_color[tod][weather]['b'], 16) - 128
+        environment_color.inputs[1].default_value = (r, g, b)
+    else:
+        environment_color.inputs[1].default_value = (0, 0, 0)
 
     #Set locations
     texture_coordinate.location = (-752.1420288085938, 172.89166259765625)
@@ -233,20 +289,19 @@ def makeMaterial(name, image):
     
     return mat
 
-def createAllMaterials(texlist, rootPath: Path):
+def createAllMaterials(metadata: dict, rootPath: Path, weather: str, tod: str):
     # Create required materials
     materials = []
-    for path in texlist:
+    for path in metadata['textures']:
         name = Path(path).stem
         image = makeImage(name, str(rootPath.joinpath(path)))
-        materials.append(makeMaterial(name, image))
+        materials.append(makeMaterial(name, image, metadata['global_color'], weather, tod))
     return materials
 
-def convertTrk(srt: Srt, metadata: dict, filepath: str):
+def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: str, tod: str):
     new_objects = []  # put new objects here
     rootPath = Path(filepath).parent
-    materials = createAllMaterials(metadata['textures'], rootPath)
-    scale = 0.01
+    materials = createAllMaterials(metadata, rootPath, weather, tod)
     
     for i, trkPart in enumerate(srt.trkparts):
 
@@ -514,7 +569,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
 
     # floormap
     floor_image = makeImage("FloorMap", str(rootPath.joinpath(metadata['floormap']['image'])))
-    floor_material = makeMaterial("FloorMap", floor_image)
+    floor_material = makeMaterial("FloorMap", floor_image, {}, "none", "none")
     me = bpy.data.meshes.new("FloorMap") 
     ob = bpy.data.objects.new("FloorMap", me)
 
@@ -570,16 +625,16 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str):
 
     return new_objects
 
-def loadTrk(context, filepath):
+def loadTrk(context, filepath, scale, trk, weather, tod):
     with open(filepath, mode='rb') as f: 
         stream = KaitaiStream(f)
         track = Srt(stream)
 
-    metadata_file = (resources.files(trackmeta)) / "island.json"
+    metadata_file = (resources.files(trackmeta)) / (trk + ".json")
     with open(metadata_file, mode='r') as f:
         metadata = json.load(f)
 
-    objlist = convertTrk(track, metadata, filepath)
+    objlist = convertTrk(track, metadata, filepath, scale, weather, tod)
     scn = bpy.context.scene
     
     for o in scn.objects:
