@@ -52,6 +52,7 @@ class SONICR_OP_ImportTrk(bpy.types.Operator, ImportHelper):
     )
 
     trk_items = [
+        ("auto",    "Auto-detect",      ""),
         ("island",  "Resort Island",    ""),
         ("city",    "Radical City",     ""),
         ("ruin",    "Regal Ruin",       ""),
@@ -629,6 +630,9 @@ def loadTrk(context, filepath, scale, trk, weather, tod):
     with open(filepath, mode='rb') as f: 
         stream = KaitaiStream(f)
         track = Srt(stream)
+
+    if (trk == "auto"):
+        trk = Path(filepath).stem.split('_')[0]
 
     metadata_file = (resources.files(trackmeta)) / (trk + ".json")
     with open(metadata_file, mode='r') as f:
