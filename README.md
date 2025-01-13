@@ -20,9 +20,14 @@ You'll also need to prepare the files that this add-on expects. As of right now,
     - general01.png
     - ...
 - island\
+    - islandfloor.png
+    - islandfloor_snow.png
     - island00.png
     - island01.png
     - ...
+    - snow\
+        - isl_s_00.png
+        - isl_s_01.png
 - city\
     - ...
 - ...
@@ -31,6 +36,6 @@ Future versions should be able to work directly with the Sonic R files.
 
 ## Usage
 
-One the plug-in is installed and activated, go to File > Import, and select "Sonic R Track (.bin)". Select the .bin file you prepared in the setup step. In the sidebar on the right, select the name of the track you selected and, optionally, the weather and time of day to enable custom lighting.
+One the plug-in is installed and activated, go to File > Import, and select "Sonic R Track (.bin)". Select the .bin file you prepared in the setup step. In the sidebar on the right, you can select the weather and time of day to enable custom lighting. You can also override the track metadata file to use, if needed.
 
 As of right now, only imports are supported.
