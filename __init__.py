@@ -225,10 +225,10 @@ def makeMaterial(name: str, image, global_color: dict, weather: str, tod: str):
     environment_color.label = "Environment Color"
     environment_color.name = "Environment Color"
     environment_color.operation = 'ADD'
-    if (weather != 'none' and tod != "none" and 'clear' in global_color):
-        r = int(global_color[tod][weather]['r'], 16) - 128
-        g = int(global_color[tod][weather]['g'], 16) - 128
-        b = int(global_color[tod][weather]['b'], 16) - 128
+    if (weather != 'none' and tod != "none" and 'day' in global_color):
+        r = int(global_color[weather][tod]['r'], 16) - 128
+        g = int(global_color[weather][tod]['g'], 16) - 128
+        b = int(global_color[weather][tod]['b'], 16) - 128
         environment_color.inputs[1].default_value = (r, g, b)
     else:
         environment_color.inputs[1].default_value = (0, 0, 0)
