@@ -29,6 +29,7 @@
     ],
     "floormap": {
         "image": "ruin/ruinfloor.png",
+        "image_snow": "ruin/ruinfloor_snow.png",
         "x1": -366.7468,
         "x2": 192.39217,
         "y1": -279.3009,

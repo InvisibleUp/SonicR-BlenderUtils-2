@@ -27,6 +27,7 @@
     ],
     "floormap": {
         "image": "factory/factoryfloor.png",
+        "image_snow": "factory/factoryfloor_snow.png",
         "x1": -450.8096,
         "x2": 445.7539,
         "y1": -472.4747,

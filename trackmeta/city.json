@@ -30,6 +30,7 @@
     ],
     "floormap": {
         "image": "city/cityfloor.png",
+        "image_snow": "city/cityfloor_snow.png",
         "x1": -476.8025,
         "x2": 631.40845,
         "y1": -564.7224,

@@ -226,10 +226,10 @@ def makeMaterial(name: str, image, global_color: dict, weather: str, tod: str):
     environment_color.label = "Environment Color"
     environment_color.name = "Environment Color"
     environment_color.operation = 'ADD'
-    if (weather != 'none' and tod != "none" and 'day' in global_color):
-        r = int(global_color[weather][tod]['r'], 16) - 128
-        g = int(global_color[weather][tod]['g'], 16) - 128
-        b = int(global_color[weather][tod]['b'], 16) - 128
+    if (weather != 'none' and tod != "none" and 'clear' in global_color):
+        r = (int(global_color[weather][tod]['r'], 16) - 128) / 256
+        g = (int(global_color[weather][tod]['g'], 16) - 128) / 256
+        b = (int(global_color[weather][tod]['b'], 16) - 128) / 256
         environment_color.inputs[1].default_value = (r, g, b)
     else:
         environment_color.inputs[1].default_value = (0, 0, 0)
@@ -293,7 +293,11 @@ def makeMaterial(name: str, image, global_color: dict, weather: str, tod: str):
 def createAllMaterials(metadata: dict, rootPath: Path, weather: str, tod: str):
     # Create required materials
     materials = []
-    for path in metadata['textures']:
+    if weather == "snow":
+        textures = metadata['textures_snow']
+    else:
+        textures = metadata['textures']
+    for path in textures:
         name = Path(path).stem
         image = makeImage(name, str(rootPath.joinpath(path)))
         materials.append(makeMaterial(name, image, metadata['global_color'], weather, tod))
@@ -569,8 +573,12 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
     # excluding Sec9 for now
 
     # floormap
-    floor_image = makeImage("FloorMap", str(rootPath.joinpath(metadata['floormap']['image'])))
-    floor_material = makeMaterial("FloorMap", floor_image, {}, "none", "none")
+    if weather == "snow":
+        floor_image = makeImage("FloorMap", str(rootPath.joinpath(metadata['floormap']['image_snow'])))
+    else:
+        floor_image = makeImage("FloorMap", str(rootPath.joinpath(metadata['floormap']['image'])))
+
+    floor_material = makeMaterial("FloorMap", floor_image, metadata['global_color'], weather, tod)
     me = bpy.data.meshes.new("FloorMap") 
     ob = bpy.data.objects.new("FloorMap", me)
 
@@ -632,7 +640,8 @@ def loadTrk(context, filepath, scale, trk, weather, tod):
         track = Srt(stream)
 
     if (trk == "auto"):
-        trk = Path(filepath).stem.split('_')[0]
+        trk = Path(filepath).stem.split('_')[0].lower()
+        if (trk == "emrald"): trk = "emerald"
 
     metadata_file = (resources.files(trackmeta)) / (trk + ".json")
     with open(metadata_file, mode='r') as f:
