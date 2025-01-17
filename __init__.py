@@ -303,6 +303,16 @@ def createAllMaterials(metadata: dict, rootPath: Path, weather: str, tod: str):
         materials.append(makeMaterial(name, image, metadata['global_color'], weather, tod))
     return materials
 
+# Create a 1024x1024 texture combining all defined textures as one
+def createTextureAtlas():
+    ...
+
+# Convert a raw tpage/texture coordinate to a position on the texture atlas
+def getTextureCoords(tpage: int, x: int, y: int) -> (float, float):
+    (x2, y2) = ((x+1) / 256, (256 - y-1) / 256)
+    # TODO: texture atlas lookup
+    return (x2, y2)
+
 def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: str, tod: str):
     new_objects = []  # put new objects here
     rootPath = Path(filepath).parent
@@ -372,10 +382,10 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
         j = 0
         for p, f in zip(me.polygons, trkPart.faces):
             # set textures
-            uvtex.uv[j+0].vector = [(f.ta_x+1) / 256, (256 - f.ta_y-1) / 256]
-            uvtex.uv[j+1].vector = [(f.tb_x+1) / 256, (256 - f.tb_y-1) / 256]
-            uvtex.uv[j+2].vector = [(f.tc_x+1) / 256, (256 - f.tc_y-1) / 256]
-            uvtex.uv[j+3].vector = [(f.td_x+1) / 256, (256 - f.td_y-1) / 256]
+            uvtex.uv[j+0].vector = getTextureCoords(f.tpage, f.ta_x, f.ta_y)
+            uvtex.uv[j+1].vector = getTextureCoords(f.tpage, f.tb_x, f.tb_y)
+            uvtex.uv[j+2].vector = getTextureCoords(f.tpage, f.tc_x, f.tc_y)
+            uvtex.uv[j+3].vector = getTextureCoords(f.tpage, f.td_x, f.td_y)
             j += 4
             p.material_index = f.tpage
 
@@ -463,15 +473,15 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
         # must be created after polygons; otherwise Blender crashes
         uvtex = me.uv_layers.new()
         for j, f in enumerate(decoPart.tris):
-            uvtex.uv[(j*3)+0].vector = [(f.ta_x+1) / 256, (256 - f.ta_y-1) / 256]
-            uvtex.uv[(j*3)+1].vector = [(f.tb_x+1) / 256, (256 - f.tb_y-1) / 256]
-            uvtex.uv[(j*3)+2].vector = [(f.tc_x+1) / 256, (256 - f.tc_y-1) / 256]
+            uvtex.uv[(j*3)+0].vector = getTextureCoords(f.tpage, f.ta_x, f.ta_y)
+            uvtex.uv[(j*3)+1].vector = getTextureCoords(f.tpage, f.tb_x, f.tb_y)
+            uvtex.uv[(j*3)+2].vector = getTextureCoords(f.tpage, f.tc_x, f.tc_y)
 
         for j, f in enumerate(decoPart.quads):
-            uvtex.uv[(decoPart.num_tris*3)+(j*4)+0].vector = [(f.ta_x+1) / 256, (256 - f.ta_y-1) / 256]
-            uvtex.uv[(decoPart.num_tris*3)+(j*4)+1].vector = [(f.tb_x+1) / 256, (256 - f.tb_y-1) / 256]
-            uvtex.uv[(decoPart.num_tris*3)+(j*4)+2].vector = [(f.tc_x+1) / 256, (256 - f.tc_y-1) / 256]
-            uvtex.uv[(decoPart.num_tris*3)+(j*4)+3].vector = [(f.td_x+1) / 256, (256 - f.td_y-1) / 256]
+            uvtex.uv[(decoPart.num_tris*3)+(j*4)+0].vector = getTextureCoords(f.tpage, f.ta_x, f.ta_y)
+            uvtex.uv[(decoPart.num_tris*3)+(j*4)+1].vector = getTextureCoords(f.tpage, f.tb_x, f.tb_y)
+            uvtex.uv[(decoPart.num_tris*3)+(j*4)+2].vector = getTextureCoords(f.tpage, f.tc_x, f.tc_y)
+            uvtex.uv[(decoPart.num_tris*3)+(j*4)+3].vector = getTextureCoords(f.tpage, f.td_x, f.td_y)
         
         # no edges - calculate them
         me.update(calc_edges=True)
