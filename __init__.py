@@ -29,7 +29,6 @@ from itertools import *
 from importlib import resources
 
 import bpy
-import numpy as np
 from PIL import Image
 from bpy.props import StringProperty, EnumProperty, FloatProperty
 from bpy_extras.io_utils import ImportHelper, orientation_helper
@@ -198,7 +197,7 @@ def createTextureAtlas(metadata: dict, rootPath: Path, weather: str):
     # Disable color space calculations
     bpy_im.colorspace_settings.name = 'Non-Color'
     # load data
-    bpy_im.pixels = np.divide(np.frombuffer(atlas.tobytes(), dtype=np.uint8).astype(np.float32), 256)
+    bpy_im.pixels = [x / 256 for x in atlas.tobytes()]
     bpy_im.pack()
     bpy_im.update()
     with bpy.context.temp_override(edit_image=bpy_im):
