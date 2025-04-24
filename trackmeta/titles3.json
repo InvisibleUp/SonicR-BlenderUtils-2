@@ -2,10 +2,10 @@
     "name": "TITLES3",
     "file_trk": "bin/titles/titles3.bin",
     "textures": [
-        "bin/titles/titles00.png",
-        "general/icon01.png",
-        "bin/emap/sonicr.png",
-        "general/player00.png",
-        "general/player01.png"
+        "bin/titles/titles00.raw",
+        "general/icon01.raw",
+        "bin/emap/sonicr.raw",
+        "general/player00.raw",
+        "general/player01.raw"
     ]
 }

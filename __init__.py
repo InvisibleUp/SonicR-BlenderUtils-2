@@ -206,6 +206,18 @@ def createTextureAtlas(metadata: dict, rootPath: Path, weather: str):
 
     return bpy_im
 
+def makeImage(name, path):
+    try:
+        image = bpy.data.images.load(path)
+        image.name = name
+ 
+    except RuntimeError:
+        # texture not found. oh well.
+        image = bpy.data.images.new(name, 256, 256)
+ 
+    # Disable color space calculations
+    image.colorspace_settings.name = 'Non-Color'
+
 ''' Generate a material for a given texture '''
 def createMaterial(name: str, image, global_color: dict, weather: str, tod: str):
     mat = bpy.data.materials.new(name)
@@ -662,13 +674,12 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
     # excluding Sec9 for now
 
     # floormap
-    '''
     if weather == "snow":
-        floor_image = makeImage("FloorMap", str(rootPath.joinpath(metadata['floormap']['image_snow'])))
+        floor_image = makeImage("FloorMap", str(Path(rootPath).joinpath(metadata['floormap']['image_snow'])))
     else:
-        floor_image = makeImage("FloorMap", str(rootPath.joinpath(metadata['floormap']['image'])))
+        floor_image = makeImage("FloorMap", str(Path(rootPath).joinpath(metadata['floormap']['image'])))
 
-    floor_material = makeMaterial("FloorMap", floor_image, metadata['global_color'], weather, tod)
+    floor_material = createMaterial("FloorMap", floor_image, metadata['global_color'], weather, tod)
     me = bpy.data.meshes.new("FloorMap") 
     ob = bpy.data.objects.new("FloorMap", me)
 
@@ -721,7 +732,6 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
     me.validate()
 
     new_objects.append(ob)
-    '''
 
     return new_objects
 

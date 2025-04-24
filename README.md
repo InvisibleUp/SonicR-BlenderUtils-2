@@ -27,32 +27,10 @@ First, download the add-on from the Releases tab on GitHub. You can also build i
 
 In Blender's Preferences window, navigate to "Add-ons" and select "Install from Disk" from the drop-down menu in the top right. Select the .ZIP file you downloaded or built.
 
-You'll also need to prepare the files that this add-on expects. As of right now, the directory structure needs to be like so:
-
-- island_e.bin
-- city_b.bin
-- [...].bin
-- general\
-    - general00.png
-    - general01.png
-    - ...
-- island\
-    - islandfloor.png
-    - islandfloor_snow.png
-    - island00.png
-    - island01.png
-    - ...
-    - snow\
-        - isl_s_00.png
-        - isl_s_01.png
-- city\
-    - ...
-- ...
-
-Future versions should be able to work directly with the Sonic R files.
-
 ## Usage
 
-One the plug-in is installed and activated, go to File > Import, and select "Sonic R Track (.bin)". Select the .bin file you prepared in the setup step. In the sidebar on the right, you can select the weather and time of day to enable custom lighting. You can also override the track metadata file to use, if needed.
+One the plug-in is installed and activated, go to File > Import, and select "Sonic R Track (.bin)". Select a track .bin file from your Sonic R install directory. In the sidebar on the right, you can select the weather and time of day to enable custom lighting. You can also override the track metadata file to use, if needed.
 
-As of right now, only imports are supported.
+As of writing, floor maps are not automatically converted from Sonic R's native format. If you wish to view them, use [MapConverter](https://gamebanana.com/tools/8471) and move the resulting `map.png` to the course's directory, naming it `[course]floor.png`. (ex: `islandfloor.png`). Future versions of this converter will do this for you automatically.
+
+As of right now, only track imports are supported. Character imports will be worked on next. It is unlikely that exporting will be supported in the near future.

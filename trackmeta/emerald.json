@@ -4,13 +4,13 @@
     "file_col": "bin/extras/emerald.ter",
     "file_ai": "ai/aistuffe.bin",
     "textures": [
-        "emerald/cas00.png",
-        "emerald/cas01.png",
-        "island/island05.png",
-        "emerald/cas02.png",
-        "island/island02.png",
-        "city/city03.png",
-        "island/island03.png"
+        "emerald/cas00.raw",
+        "emerald/cas01.raw",
+        "island/island05.raw",
+        "emerald/cas02.raw",
+        "island/island02.raw",
+        "city/city03.raw",
+        "island/island03.raw"
     ],
     "global_color": {
         "r": "0x80",
