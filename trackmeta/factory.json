@@ -1,6 +1,6 @@
 {
     "name": "Reactive Factory",
-    "file_trk": "ruin/factry_e.bin",
+    "file_trk": "factory/factry_e.bin",
     "file_col": "bin/extras/factory.ter",
     "file_ai": "ai/aistufff.bin",
     "textures": [

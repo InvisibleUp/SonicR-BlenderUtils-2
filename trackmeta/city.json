@@ -31,7 +31,7 @@
     "floormap": {
         "ply": "city/city.ply",
         "ply_snow": "city/snow/city_s.ply",
-        "map": "city/snow/city.map",
+        "map": "city/city.map",
         "x1": -476.8025,
         "x2": 631.40845,
         "y1": -564.7224,
