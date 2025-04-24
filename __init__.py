@@ -147,13 +147,18 @@ def loadRawTexture(filepath: str) -> Image.Image | None:
         image = Image.frombytes('RGB', size, f.read())
     
     # mask out #00FF00
-    '''img_array = np.array(image)
-    mask_array = \
-        (img_array[:,:,0] == 0) & \
-        (img_array[:,:,1] == 255) & \
-        (img_array[:,:,2] == 0)  
-    mask = Image.fromarray(mask_array, '1')
-    image.putalpha(mask)'''
+    # TODO: improve speed by avoiding get/putpixel
+    mask = Image.new('1', size)
+    for x in range(size[0]):
+        for y in range(size[1]):
+            pixel = image.getpixel((x,y))
+            mask.putpixel((x, y), (
+                pixel != (0,255,0) and
+                # some transparency regions are defined incorrectly
+                pixel != (10,254,11) and
+                pixel != (0,252,0)
+            ))
+    image.putalpha(mask)
 
     return image
 
@@ -214,8 +219,6 @@ def createMaterial(name: str, image, global_color: dict, weather: str, tod: str)
     material.default_group_node_width = 140
     material.nodes.clear()
 
-    #material interface
-
     #initialize material nodes
     #node Texture Coordinate
     texture_coordinate = material.nodes.new("ShaderNodeTexCoord")
@@ -225,11 +228,6 @@ def createMaterial(name: str, image, global_color: dict, weather: str, tod: str)
     #node Light Path
     light_path = material.nodes.new("ShaderNodeLightPath")
     light_path.name = "Light Path"
-
-    #node Emit Only To Camera
-    emit_only_to_camera = material.nodes.new("ShaderNodeMixShader")
-    emit_only_to_camera.label = "Emit Only To Camera"
-    emit_only_to_camera.name = "Emit Only To Camera"
 
     #node Material Output
     material_output = material.nodes.new("ShaderNodeOutputMaterial")
@@ -284,8 +282,6 @@ def createMaterial(name: str, image, global_color: dict, weather: str, tod: str)
     #node Emission
     emission = material.nodes.new("ShaderNodeEmission")
     emission.name = "Emission"
-    #Strength
-    emission.inputs[1].default_value = 1.0
 
     #node Mix Alpha
     mix_alpha = material.nodes.new("ShaderNodeMixShader")
@@ -305,24 +301,30 @@ def createMaterial(name: str, image, global_color: dict, weather: str, tod: str)
     else:
         environment_color.inputs[1].default_value = (0, 0, 0)
 
+    #node Math
+    math = material.nodes.new("ShaderNodeMath")
+    math.name = "Math"
+    math.operation = 'ROUND'
+    math.use_clamp = True
+
+
     #Set locations
     texture_coordinate.location = (-752.1420288085938, 172.89166259765625)
-    light_path.location = (215.29904174804688, 576.9533081054688)
-    emit_only_to_camera.location = (471.49346923828125, 344.90069580078125)
-    material_output.location = (703.8551025390625, 367.49798583984375)
-    color_attribute.location = (-947.4661865234375, 401.4444274902344)
+    light_path.location = (-255.24154663085938, 58.26454544067383)
+    material_output.location = (442.5654602050781, 217.05323791503906)
+    color_attribute.location = (-909.04296875, 400.07073974609375)
     add_vertex_color.location = (-252.72947692871094, 380.2495422363281)
     adjust_vertex_color.location = (-703.556640625, 452.8673095703125)
     image_texture.location = (-555.6151123046875, 191.15330505371094)
     transparent_bsdf.location = (-37.10700988769531, 387.06463623046875)
     emission.location = (-38.904380798339844, 288.57635498046875)
-    mix_alpha.location = (215.2847900390625, 231.6190643310547)
+    mix_alpha.location = (207.05123901367188, 193.15606689453125)
     environment_color.location = (-476.5963134765625, 448.4853210449219)
+    math.location = (-36.93527603149414, 163.29348754882812)
 
     #Set dimensions
     texture_coordinate.width, texture_coordinate.height = 140.0, 100.0
     light_path.width, light_path.height = 140.0, 100.0
-    emit_only_to_camera.width, emit_only_to_camera.height = 140.0, 100.0
     material_output.width, material_output.height = 140.0, 100.0
     color_attribute.width, color_attribute.height = 140.0, 100.0
     add_vertex_color.width, add_vertex_color.height = 140.0, 100.0
@@ -332,33 +334,34 @@ def createMaterial(name: str, image, global_color: dict, weather: str, tod: str)
     emission.width, emission.height = 140.0, 100.0
     mix_alpha.width, mix_alpha.height = 140.0, 100.0
     environment_color.width, environment_color.height = 140.0, 100.0
+    math.width, math.height = 140.0, 100.0
 
     #initialize material links
-    #light_path.Is Camera Ray -> emit_only_to_camera.Fac
-    material.links.new(light_path.outputs[0], emit_only_to_camera.inputs[0])
-    #emit_only_to_camera.Shader -> material_output.Surface
-    material.links.new(emit_only_to_camera.outputs[0], material_output.inputs[0])
     #texture_coordinate.UV -> image_texture.Vector
     material.links.new(texture_coordinate.outputs[2], image_texture.inputs[0])
     #image_texture.Color -> add_vertex_color.Vector
     material.links.new(image_texture.outputs[0], add_vertex_color.inputs[1])
     #color_attribute.Color -> adjust_vertex_color.Vector
     material.links.new(color_attribute.outputs[0], adjust_vertex_color.inputs[0])
-    #add_vertex_color.Vector -> emission.Color
-    material.links.new(add_vertex_color.outputs[0], emission.inputs[0])
-    #mix_alpha.Shader -> emit_only_to_camera.Shader
-    material.links.new(mix_alpha.outputs[0], emit_only_to_camera.inputs[2])
-    #image_texture.Alpha -> mix_alpha.Fac
-    material.links.new(image_texture.outputs[1], mix_alpha.inputs[0])
-    #transparent_bsdf.BSDF -> mix_alpha.Shader
-    material.links.new(transparent_bsdf.outputs[0], mix_alpha.inputs[1])
     #emission.Emission -> mix_alpha.Shader
     material.links.new(emission.outputs[0], mix_alpha.inputs[2])
     #adjust_vertex_color.Vector -> environment_color.Vector
     material.links.new(adjust_vertex_color.outputs[0], environment_color.inputs[0])
+    #transparent_bsdf.BSDF -> mix_alpha.Shader
+    material.links.new(transparent_bsdf.outputs[0], mix_alpha.inputs[1])
+    #mix_alpha.Shader -> material_output.Surface
+    material.links.new(mix_alpha.outputs[0], material_output.inputs[0])
+    #light_path.Is Camera Ray -> emission.Strength
+    material.links.new(light_path.outputs[0], emission.inputs[1])
+    #add_vertex_color.Vector -> emission.Color
+    material.links.new(add_vertex_color.outputs[0], emission.inputs[0])
     #environment_color.Vector -> add_vertex_color.Vector
     material.links.new(environment_color.outputs[0], add_vertex_color.inputs[0])
-    
+    #image_texture.Alpha -> math.Value
+    material.links.new(image_texture.outputs[1], math.inputs[0])
+    #math.Value -> mix_alpha.Fac
+    material.links.new(math.outputs[0], mix_alpha.inputs[0])
+
     return mat
 
 # Create required materials
@@ -373,17 +376,22 @@ def createAllMaterials(metadata: dict, rootPath: Path, weather: str, tod: str):
 # Convert a raw tpage/texture coordinate to a position on the texture atlas
 def getTextureCoords(tpage: int, x: int, y: int) -> (float, float):
     # convert to float
-    (x2, y2) = ((x+1) / 256, (256 - y-1) / 256)
-
     # the atlas is a 4x4 array of tpages, so compensate
-    '''x2 /= 4
-    y2 /= 4
+    (x2, y2) = (x / 1024, y / 1024)
+
+    # for some reason, I'm getting tpages much larger than they should be
+    # possible parsing issue?
+    tpage = tpage % 2**16
 
     # tpage offset
     x2 += (tpage % 4) / 4
-    y2 += (tpage // 4) / 4'''
+    y2 += (tpage // 4) / 4
 
-    return (x2, y2)
+    # debug asserts
+    assert y2 <= 1, (tpage, y, y2)
+    assert y2 >= 0, (tpage, y, y2)
+
+    return (x2, -y2)
 
 def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: str, tod: str):
     new_objects = []  # put new objects here
