@@ -203,20 +203,49 @@ def createTextureAtlas(metadata: dict, rootPath: Path, weather: str):
     with bpy.context.temp_override(edit_image=bpy_im):
         bpy.ops.image.flip(use_flip_y=True)
 
-
     return bpy_im
 
-def makeImage(name, path):
-    try:
-        image = bpy.data.images.load(path)
-        image.name = name
- 
-    except RuntimeError:
-        # texture not found. oh well.
-        image = bpy.data.images.new(name, 256, 256)
- 
+def createFloormapTexture(metadata: dict, rootPath: Path, weather: str) -> Image.Image:
+    map_path = Path(rootPath, metadata['floormap']['map'])
+    if weather == "snow":
+        ply_path = Path(rootPath, metadata['floormap']['ply_snow'])
+    else:
+        ply_path = Path(rootPath, metadata['floormap']['ply'])
+
+    # Map is a 256x256 array of tile indicies stored as bytes
+    # Map needs to be cropped to the upper 128x128 tiles (the rest is blank/junk)
+    # tiles are 32x32, stored in a file that's 320x384 (or 10x12 tiles)
+    # i guess this means a maximum of 120 tiles? strange.
+
+    with open(map_path, 'rb') as map_file:
+        map = map_file.read()
+    
+    ply = loadRawTexture(ply_path)
+
+    # final texture is 128*32 = 4096×4096
+    texture = Image.new("RGBA", (4096, 4096))
+
+    for x in range(128):
+        for y in range(128):
+            tile = map[y * 256 + x]
+            src_x = (tile % 10) * 32
+            src_y = (tile // 10) * 32
+            tile_texture = ply.crop((src_x, src_y, src_x+32, src_y+32))
+            texture.paste(tile_texture, (x*32, y*32))
+
+    
+    # convert to Blender image
+    bpy_im = bpy.data.images.new("atlas", 4096, 4096)
     # Disable color space calculations
-    image.colorspace_settings.name = 'Non-Color'
+    bpy_im.colorspace_settings.name = 'Non-Color'
+    # load data
+    bpy_im.pixels = [x / 256 for x in texture.tobytes()]
+    bpy_im.pack()
+    bpy_im.update()
+    with bpy.context.temp_override(edit_image=bpy_im):
+        bpy.ops.image.flip(use_flip_y=True)
+
+    return bpy_im
 
 ''' Generate a material for a given texture '''
 def createMaterial(name: str, image, global_color: dict, weather: str, tod: str):
@@ -674,10 +703,8 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
     # excluding Sec9 for now
 
     # floormap
-    if weather == "snow":
-        floor_image = makeImage("FloorMap", str(Path(rootPath).joinpath(metadata['floormap']['image_snow'])))
-    else:
-        floor_image = makeImage("FloorMap", str(Path(rootPath).joinpath(metadata['floormap']['image'])))
+    if ('floormap' in metadata):
+        floor_image = createFloormapTexture(metadata, rootPath, weather)
 
     floor_material = createMaterial("FloorMap", floor_image, metadata['global_color'], weather, tod)
     me = bpy.data.meshes.new("FloorMap") 

@@ -28,8 +28,6 @@
         "island/snow/isl_s_03.raw"
     ],
     "floormap": {
-        "image": "ruin/ruinfloor.png",
-        "image_snow": "ruin/ruinfloor_snow.png",
         "ply": "ruin/ruin.ply",
         "ply_snow": "ruin/snow/ruin_s.ply",
         "map": "ruin/ruin.map",

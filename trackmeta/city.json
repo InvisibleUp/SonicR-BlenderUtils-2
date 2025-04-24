@@ -29,8 +29,6 @@
         "island/island02.raw"
     ],
     "floormap": {
-        "image": "city/cityfloor.png",
-        "image_snow": "city/cityfloor_snow.png",
         "ply": "city/city.ply",
         "ply_snow": "city/snow/city_s.ply",
         "map": "city/snow/city.map",

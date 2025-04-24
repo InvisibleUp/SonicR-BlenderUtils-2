@@ -26,8 +26,6 @@
         "island/snow/isl_s_05.raw"
     ],
     "floormap": {
-        "image": "factory/factoryfloor.png",
-        "image_snow": "factory/factoryfloor_snow.png",
         "ply": "factory/factory.ply",
         "ply_snow": "factory/snow/factory_s.ply",
         "map": "factory/factory.map",

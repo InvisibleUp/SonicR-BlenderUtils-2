@@ -36,8 +36,6 @@
         "island/island06.raw"
     ],
     "floormap": {
-        "image": "island/islandfloor.png",
-        "image_snow": "island/islandfloor_snow.png",
         "ply": "island/island.ply",
         "ply_snow": "island/snow/island_s.ply",
         "map": "island/island.map",
