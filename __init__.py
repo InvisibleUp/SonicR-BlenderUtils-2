@@ -222,7 +222,7 @@ def createFloormapTexture(metadata: dict, rootPath: Path, weather: str) -> Image
     
     ply = loadRawTexture(ply_path)
 
-    # final texture is 128*32 = 4096√?4096
+    # final texture is 128*32 = 4096Å~4096
     texture = Image.new("RGBA", (4096, 4096))
 
     for x in range(128):
