@@ -21,16 +21,22 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy
+import os
+import json
+import platform
 from pathlib import Path
 from itertools import *
 from importlib import resources
-import json
+
+import bpy
+import numpy as np
+from PIL import Image
 from bpy.props import StringProperty, EnumProperty, FloatProperty
 from bpy_extras.io_utils import ImportHelper, orientation_helper
 import mathutils
 from kaitaistruct import KaitaiStream
 from .kaitaidefs.srt import Srt
+
 from . import trackmeta
 
 class SONICR_OP_ImportTrk(bpy.types.Operator, ImportHelper):
@@ -120,19 +126,84 @@ def unregister():
 if __name__ == "__main__":
     register()
 
-def makeImage(name, path):
-    try:
-        image = bpy.data.images.load(path)
-        image.name = name
-    except RuntimeError:
-        # texture not found. oh well.
-        image = bpy.data.images.new(name, 256, 256)
-    # Disable color space calculations
-    image.colorspace_settings.name = 'Non-Color'
+def loadRawTexture(filepath: str) -> Image.Image | None:
+    filesize = os.path.getsize(filepath)
+
+    if filesize == 256*256*3:    # generic tpage
+        size = (256, 256)
+    elif filesize == 32*224*3:   # FLAKE/PLOP
+        size = (32, 224)
+    elif filesize == 320*384*3:  # .PLY floormap tiles
+        size = (320, 384)
+    elif filesize == 1664*128*3: # track bg
+        size = (1664, 128)
+    elif filesize == 640*480*3:  # static bg
+        size = (640, 480)
+    else:
+        return None
+    
+    # TODO: handle case-sensitive file systems
+    with open(filepath, mode='rb') as f:
+        image = Image.frombytes('RGB', size, f.read())
+    
+    # mask out #00FF00
+    '''img_array = np.array(image)
+    mask_array = \
+        (img_array[:,:,0] == 0) & \
+        (img_array[:,:,1] == 255) & \
+        (img_array[:,:,2] == 0)  
+    mask = Image.fromarray(mask_array, '1')
+    image.putalpha(mask)'''
+
     return image
 
+# Create a 1024x1024 texture combining all defined textures as one
+# note: 1024x1024 is enough for 16 tpages. that ought to be enough.
+def createTextureAtlas(metadata: dict, rootPath: Path, weather: str):
+    if weather == "snow":
+        textures = metadata['textures_snow']
+    else:
+        textures = metadata['textures']
+    assert(len(textures) <= 16)
+
+    atlas = Image.new('RGBA', (1024, 1024))
+    (x, y) = (0, 0)
+
+    def incrPos(x, y):
+        x += 256
+        if x == 1024:
+            x = 0
+            y += 256
+        return (x, y)
+
+    for path in textures:
+        if (path == ""):
+            (x, y) = incrPos(x, y)
+            continue
+
+        # only supporting 256x256 images for the atlas
+        image = loadRawTexture(Path(rootPath) / path)
+        assert(image.size == (256, 256))
+
+        atlas.paste(image, (x, y))
+        (x, y) = incrPos(x, y)
+    
+    # convert to Blender image
+    bpy_im = bpy.data.images.new("atlas", 1024, 1024)
+    # Disable color space calculations
+    bpy_im.colorspace_settings.name = 'Non-Color'
+    # load data
+    bpy_im.pixels = np.divide(np.frombuffer(atlas.tobytes(), dtype=np.uint8).astype(np.float32), 256)
+    bpy_im.pack()
+    bpy_im.update()
+    with bpy.context.temp_override(edit_image=bpy_im):
+        bpy.ops.image.flip(use_flip_y=True)
+
+
+    return bpy_im
+
 ''' Generate a material for a given texture '''
-def makeMaterial(name: str, image, global_color: dict, weather: str, tod: str):
+def createMaterial(name: str, image, global_color: dict, weather: str, tod: str):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
 
@@ -290,32 +361,36 @@ def makeMaterial(name: str, image, global_color: dict, weather: str, tod: str):
     
     return mat
 
+# Create required materials
 def createAllMaterials(metadata: dict, rootPath: Path, weather: str, tod: str):
-    # Create required materials
     materials = []
-    if weather == "snow":
-        textures = metadata['textures_snow']
-    else:
-        textures = metadata['textures']
-    for path in textures:
-        name = Path(path).stem
-        image = makeImage(name, str(rootPath.joinpath(path)))
-        materials.append(makeMaterial(name, image, metadata['global_color'], weather, tod))
-    return materials
 
-# Create a 1024x1024 texture combining all defined textures as one
-def createTextureAtlas():
-    ...
+    # texture atlas
+    atlas = createTextureAtlas(metadata, rootPath, weather)
+    materials.append(createMaterial('main', atlas, metadata['global_color'], weather, tod))
+    return materials
 
 # Convert a raw tpage/texture coordinate to a position on the texture atlas
 def getTextureCoords(tpage: int, x: int, y: int) -> (float, float):
+    # convert to float
     (x2, y2) = ((x+1) / 256, (256 - y-1) / 256)
-    # TODO: texture atlas lookup
+
+    # the atlas is a 4x4 array of tpages, so compensate
+    '''x2 /= 4
+    y2 /= 4
+
+    # tpage offset
+    x2 += (tpage % 4) / 4
+    y2 += (tpage // 4) / 4'''
+
     return (x2, y2)
 
 def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: str, tod: str):
     new_objects = []  # put new objects here
-    rootPath = Path(filepath).parent
+    # TODO: handle case-insensitive file systems
+    trkPath = str(Path(metadata['file_trk'].lower()))
+    rootPath = str(Path(filepath.lower())).removesuffix(trkPath)
+
     materials = createAllMaterials(metadata, rootPath, weather, tod)
     
     for i, trkPart in enumerate(srt.trkparts):
@@ -387,7 +462,6 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
             uvtex.uv[j+2].vector = getTextureCoords(f.tpage, f.tc_x, f.tc_y)
             uvtex.uv[j+3].vector = getTextureCoords(f.tpage, f.td_x, f.td_y)
             j += 4
-            p.material_index = f.tpage
 
         ob.location = mathutils.Vector([
             trkPart.x * -scale,
@@ -453,12 +527,10 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
         for j, f in enumerate(decoPart.tris):
             p = me.polygons[j]
             p.loop_start = j * 3
-            p.material_index = f.tpage
         # quads
         for j, f in enumerate(decoPart.quads):
             p = me.polygons[decoPart.num_tris + j]
             p.loop_start = (decoPart.num_tris * 3) + (j * 4)
-            p.material_index = f.tpage
 
         # Face vertices
         # note: cannot set loop_total directly; is derived from loop_start
@@ -583,6 +655,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
     # excluding Sec9 for now
 
     # floormap
+    '''
     if weather == "snow":
         floor_image = makeImage("FloorMap", str(rootPath.joinpath(metadata['floormap']['image_snow'])))
     else:
@@ -641,6 +714,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
     me.validate()
 
     new_objects.append(ob)
+    '''
 
     return new_objects
 
