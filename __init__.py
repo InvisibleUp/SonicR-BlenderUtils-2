@@ -222,7 +222,7 @@ def createFloormapTexture(metadata: dict, rootPath: Path, weather: str) -> Image
     
     ply = loadRawTexture(ply_path)
 
-    # final texture is 128*32 = 4096×4096
+    # final texture is 128*32 = 4096x4096
     texture = Image.new("RGBA", (4096, 4096))
 
     for x in range(128):
@@ -706,53 +706,53 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
     if ('floormap' in metadata):
         floor_image = createFloormapTexture(metadata, rootPath, weather)
 
-    floor_material = createMaterial("FloorMap", floor_image, metadata['global_color'], weather, tod)
-    me = bpy.data.meshes.new("FloorMap") 
-    ob = bpy.data.objects.new("FloorMap", me)
+        floor_material = createMaterial("FloorMap", floor_image, metadata['global_color'], weather, tod)
+        me = bpy.data.meshes.new("FloorMap") 
+        ob = bpy.data.objects.new("FloorMap", me)
 
-    me.materials.append(floor_material)
-    me.vertices.add(4)
-    me.loops.add(4)
-    me.polygons.add(1)
-    colormap = ob.data.color_attributes.new(
-        name='',
-        type='FLOAT_COLOR',
-        domain='POINT'
-    )
+        me.materials.append(floor_material)
+        me.vertices.add(4)
+        me.loops.add(4)
+        me.polygons.add(1)
+        colormap = ob.data.color_attributes.new(
+            name='',
+            type='FLOAT_COLOR',
+            domain='POINT'
+        )
 
-    me.vertices[0].co = mathutils.Vector([
-        metadata['floormap']['x1'] * metadata['floormap']['scale'] * -scale,
-        metadata['floormap']['y1'] * metadata['floormap']['scale'] * -scale,
-        0
-    ])
-    me.vertices[1].co = mathutils.Vector([
-        metadata['floormap']['x2'] * metadata['floormap']['scale'] * -scale,
-        metadata['floormap']['y1'] * metadata['floormap']['scale'] * -scale,
-        0
-    ])
-    me.vertices[2].co = mathutils.Vector([
-        metadata['floormap']['x2'] * metadata['floormap']['scale'] * -scale,
-        metadata['floormap']['y2'] * metadata['floormap']['scale'] * -scale,
-        0
-    ])
-    me.vertices[3].co = mathutils.Vector([
-        metadata['floormap']['x1'] * metadata['floormap']['scale'] * -scale,
-        metadata['floormap']['y2'] * metadata['floormap']['scale'] * -scale,
-        0
-    ])
+        me.vertices[0].co = mathutils.Vector([
+            metadata['floormap']['x1'] * metadata['floormap']['scale'] * -scale,
+            metadata['floormap']['y1'] * metadata['floormap']['scale'] * -scale,
+            0
+        ])
+        me.vertices[1].co = mathutils.Vector([
+            metadata['floormap']['x2'] * metadata['floormap']['scale'] * -scale,
+            metadata['floormap']['y1'] * metadata['floormap']['scale'] * -scale,
+            0
+        ])
+        me.vertices[2].co = mathutils.Vector([
+            metadata['floormap']['x2'] * metadata['floormap']['scale'] * -scale,
+            metadata['floormap']['y2'] * metadata['floormap']['scale'] * -scale,
+            0
+        ])
+        me.vertices[3].co = mathutils.Vector([
+            metadata['floormap']['x1'] * metadata['floormap']['scale'] * -scale,
+            metadata['floormap']['y2'] * metadata['floormap']['scale'] * -scale,
+            0
+        ])
 
-    colormap.data[0].color = [0.5, 0.5, 0.5, 1]
-    colormap.data[1].color = [0.5, 0.5, 0.5, 1]
-    colormap.data[2].color = [0.5, 0.5, 0.5, 1]
-    colormap.data[3].color = [0.5, 0.5, 0.5, 1]
+        colormap.data[0].color = [0.5, 0.5, 0.5, 1]
+        colormap.data[1].color = [0.5, 0.5, 0.5, 1]
+        colormap.data[2].color = [0.5, 0.5, 0.5, 1]
+        colormap.data[3].color = [0.5, 0.5, 0.5, 1]
 
-    me.polygons[0].vertices = [0, 1, 2, 3]
+        me.polygons[0].vertices = [0, 1, 2, 3]
 
-    uvtex = me.uv_layers.new()
-    uvtex.uv[0].vector = [0, 0]
-    uvtex.uv[1].vector = [1, 0]
-    uvtex.uv[2].vector = [1, 1]
-    uvtex.uv[3].vector = [0, 1]
+        uvtex = me.uv_layers.new()
+        uvtex.uv[0].vector = [0, 0]
+        uvtex.uv[1].vector = [1, 0]
+        uvtex.uv[2].vector = [1, 1]
+        uvtex.uv[3].vector = [0, 1]
 
     # no edges - calculate them
     me.update(calc_edges=True)
@@ -770,6 +770,7 @@ def loadTrk(context, filepath, scale, trk, weather, tod):
     if (trk == "auto"):
         trk = Path(filepath).stem.split('_')[0].lower()
         if (trk == "emrald"): trk = "emerald"
+        if (trk == "factry"): trk = "factory"
 
     metadata_file = (resources.files(trackmeta)) / (trk + ".json")
     with open(metadata_file, mode='r') as f:
