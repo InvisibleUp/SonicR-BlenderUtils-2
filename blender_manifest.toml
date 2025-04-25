@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "SonicR_Track_Import"
-version = "2.1.1"
+version = "2.1.2"
 name = "Sonic R Track Importer"
 tagline = "Imports Sonic R track files"
 maintainer = "InvisibleUp <invisibleup@outlook.com>"
