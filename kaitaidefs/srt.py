@@ -50,14 +50,18 @@ class Srt(KaitaiStruct):
         self.num_playerpos = self._io.read_u4le()
         self.playerpos = Srt.PlayerposT(self._io, self, self._root)
         self.num_replaypos = self._io.read_u4le()
-        self.replaypos = []
-        for i in range(self.num_replaypos):
-            self.replaypos.append(Srt.Coords(self._io, self, self._root))
+        if self.num_replaypos < 65535:
+            self.replaypos = []
+            for i in range(self.num_replaypos):
+                self.replaypos.append(Srt.Coords(self._io, self, self._root))
+
 
         self.num_sec9 = self._io.read_u4le()
-        self.sec9 = []
-        for i in range(((self.num_sec9 - 1) * 3)):
-            self.sec9.append(self._io.read_u2le())
+        if self.num_sec9 < 65535:
+            self.sec9 = []
+            for i in range(((self.num_sec9 - 1) * 3)):
+                self.sec9.append(self._io.read_u2le())
+
 
 
     class Trkvtx(KaitaiStruct):

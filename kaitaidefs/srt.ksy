@@ -68,6 +68,7 @@ seq:
     type: coords
     repeat: expr
     repeat-expr: num_replaypos
+    if: num_replaypos < 0xFFFF
     
   - id: num_sec9
     type: u4
@@ -76,6 +77,7 @@ seq:
     type: u2
     repeat: expr
     repeat-expr: (num_sec9-1)*3
+    if: num_sec9 < 0xFFFF
     
 types:
   trkpart:
