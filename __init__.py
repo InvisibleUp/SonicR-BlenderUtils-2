@@ -256,7 +256,6 @@ def createMaterial(name: str, image, global_color: dict | None, weather: str, to
     material = mat.node_tree
     material.color_tag = 'NONE'
     material.description = ""
-    material.default_group_node_width = 140
     material.nodes.clear()
 
     #initialize material nodes
