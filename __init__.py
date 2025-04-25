@@ -248,7 +248,7 @@ def createFloormapTexture(metadata: dict, rootPath: Path, weather: str) -> Image
     return bpy_im
 
 ''' Generate a material for a given texture '''
-def createMaterial(name: str, image, global_color: dict, weather: str, tod: str):
+def createMaterial(name: str, image, global_color: dict | None, weather: str, tod: str):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
 
@@ -333,13 +333,13 @@ def createMaterial(name: str, image, global_color: dict, weather: str, tod: str)
     environment_color.label = "Environment Color"
     environment_color.name = "Environment Color"
     environment_color.operation = 'ADD'
-    if (weather != 'none' and tod != "none" and 'clear' in global_color):
+    if (global_color is dict and weather != 'none' and tod != "none" and 'clear' in global_color):
         r = (int(global_color[weather][tod]['r'], 16) - 128) / 256
         g = (int(global_color[weather][tod]['g'], 16) - 128) / 256
         b = (int(global_color[weather][tod]['b'], 16) - 128) / 256
         environment_color.inputs[1].default_value = (r, g, b)
     else:
-        environment_color.inputs[1].default_value = (0, 0, 0)
+        environment_color.inputs[1].default_value = (0.5, 0.5, 0.5)
 
     #node Math
     math = material.nodes.new("ShaderNodeMath")
@@ -410,7 +410,7 @@ def createAllMaterials(metadata: dict, rootPath: Path, weather: str, tod: str):
 
     # texture atlas
     atlas = createTextureAtlas(metadata, rootPath, weather)
-    materials.append(createMaterial('main', atlas, metadata['global_color'], weather, tod))
+    materials.append(createMaterial('main', atlas, metadata['global_color'] or None, weather, tod))
     return materials
 
 # Convert a raw tpage/texture coordinate to a position on the texture atlas
@@ -706,7 +706,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
     if ('floormap' in metadata):
         floor_image = createFloormapTexture(metadata, rootPath, weather)
 
-        floor_material = createMaterial("FloorMap", floor_image, metadata['global_color'], weather, tod)
+        floor_material = createMaterial("FloorMap", floor_image, metadata['global_color'] or None, weather, tod)
         me = bpy.data.meshes.new("FloorMap") 
         ob = bpy.data.objects.new("FloorMap", me)
 

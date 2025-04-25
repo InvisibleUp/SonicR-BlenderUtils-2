@@ -13,9 +13,6 @@
         "island/island03.raw"
     ],
     "global_color": {
-        "r": "0x80",
-        "g": "0x80",
-        "b": "0x80",
         "sun_angle": "0x340"
     },
     "bg": "emerald/parallax/_e.raw"
