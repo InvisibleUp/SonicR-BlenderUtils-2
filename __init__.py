@@ -754,11 +754,11 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
         uvtex.uv[2].vector = [1, 1]
         uvtex.uv[3].vector = [0, 1]
 
-    # no edges - calculate them
-    me.update(calc_edges=True)
-    me.validate()
+        # no edges - calculate them
+        me.update(calc_edges=True)
+        me.validate()
 
-    new_objects.append(ob)
+        new_objects.append(ob)
 
     return new_objects
 
