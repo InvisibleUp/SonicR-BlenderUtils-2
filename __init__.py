@@ -31,7 +31,7 @@ from importlib import resources
 import bpy
 from PIL import Image
 from bpy.props import StringProperty, EnumProperty, FloatProperty
-from bpy_extras.io_utils import ImportHelper, orientation_helper
+from bpy_extras.io_utils import ImportHelper
 import mathutils
 from kaitaistruct import KaitaiStream
 from .kaitaidefs.srt import Srt
@@ -233,7 +233,6 @@ def createFloormapTexture(metadata: dict, rootPath: Path, weather: str) -> Image
             tile_texture = ply.crop((src_x, src_y, src_x+32, src_y+32))
             texture.paste(tile_texture, (x*32, y*32))
 
-    
     # convert to Blender image
     bpy_im = bpy.data.images.new("atlas", 4096, 4096)
     # Disable color space calculations
@@ -337,8 +336,13 @@ def createMaterial(name: str, image, global_color: dict | None, weather: str, to
         g = (int(global_color[weather][tod]['g'], 16) - 128) / 256
         b = (int(global_color[weather][tod]['b'], 16) - 128) / 256
         environment_color.inputs[1].default_value = (r, g, b)
+    elif ('r' in global_color):
+        r = (int(global_color['r'], 16) - 128) / 256
+        g = (int(global_color['g'], 16) - 128) / 256
+        b = (int(global_color['b'], 16) - 128) / 256
+        environment_color.inputs[1].default_value = (r, g, b)
     else:
-        environment_color.inputs[1].default_value = (0.5, 0.5, 0.5)
+        environment_color.inputs[1].default_value = (0, 0, 0)
 
     #node Math
     math = material.nodes.new("ShaderNodeMath")
@@ -409,7 +413,7 @@ def createAllMaterials(metadata: dict, rootPath: Path, weather: str, tod: str):
 
     # texture atlas
     atlas = createTextureAtlas(metadata, rootPath, weather)
-    materials.append(createMaterial('main', atlas, metadata['global_color'] or None, weather, tod))
+    materials.append(createMaterial('main', atlas, metadata['global_color'], weather, tod))
     return materials
 
 # Convert a raw tpage/texture coordinate to a position on the texture atlas
@@ -430,7 +434,7 @@ def getTextureCoords(tpage: int, x: int, y: int) -> (float, float):
     assert y2 <= 1, (tpage, y, y2)
     assert y2 >= 0, (tpage, y, y2)
 
-    return (x2, -y2)
+    return (x2, (-y2 + 1))
 
 def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: str, tod: str):
     new_objects = []  # put new objects here
@@ -688,16 +692,17 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
     new_objects.append(ob)
 
     # replay camera points
-    me = bpy.data.meshes.new("ReplayCamPoints") 
-    ob = bpy.data.objects.new("ReplayCamPoints", me)
-    me.vertices.add(srt.num_replaypos)
-    for j, subobj in enumerate(srt.replaypos):
-        me.vertices[j].co = mathutils.Vector([
-            subobj.x * -scale,
-            subobj.z * scale,
-            subobj.y * scale
-        ])
-    new_objects.append(ob)
+    if (srt.num_replaypos < 0xFFFF):
+        me = bpy.data.meshes.new("ReplayCamPoints") 
+        ob = bpy.data.objects.new("ReplayCamPoints", me)
+        me.vertices.add(srt.num_replaypos)
+        for j, subobj in enumerate(srt.replaypos):
+            me.vertices[j].co = mathutils.Vector([
+                subobj.x * -scale,
+                subobj.z * scale,
+                subobj.y * scale
+            ])
+        new_objects.append(ob)
 
     # excluding Sec9 for now
 
@@ -705,7 +710,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
     if ('floormap' in metadata):
         floor_image = createFloormapTexture(metadata, rootPath, weather)
 
-        floor_material = createMaterial("FloorMap", floor_image, metadata['global_color'] or None, weather, tod)
+        floor_material = createMaterial("FloorMap", floor_image, metadata['global_color'], weather, tod)
         me = bpy.data.meshes.new("FloorMap") 
         ob = bpy.data.objects.new("FloorMap", me)
 
@@ -774,6 +779,8 @@ def loadTrk(context, filepath, scale, trk, weather, tod):
     metadata_file = (resources.files(trackmeta)) / (trk + ".json")
     with open(metadata_file, mode='r') as f:
         metadata = json.load(f)
+    if 'global_color' not in metadata:
+        metadata['global_color'] = {}
 
     objlist = convertTrk(track, metadata, filepath, scale, weather, tod)
     scn = bpy.context.scene
