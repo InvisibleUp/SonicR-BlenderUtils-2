@@ -407,15 +407,6 @@ def createMaterial(name: str, image, global_color: dict | None, weather: str, to
 
     return mat
 
-# Create required materials
-def createAllMaterials(metadata: dict, rootPath: Path, weather: str, tod: str):
-    materials = []
-
-    # texture atlas
-    atlas = createTextureAtlas(metadata, rootPath, weather)
-    materials.append(createMaterial('main', atlas, metadata['global_color'], weather, tod))
-    return materials
-
 # Convert a raw tpage/texture coordinate to a position on the texture atlas
 def getTextureCoords(tpage: int, x: int, y: int) -> (float, float):
     # convert to float
@@ -437,12 +428,18 @@ def getTextureCoords(tpage: int, x: int, y: int) -> (float, float):
     return (x2, (-y2 + 1))
 
 def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: str, tod: str):
-    new_objects = []  # put new objects here
     # TODO: handle case-insensitive file systems
     trkPath = str(Path(metadata['file_trk'].lower()))
     rootPath = str(Path(filepath.lower())).removesuffix(trkPath)
 
-    materials = createAllMaterials(metadata, rootPath, weather, tod)
+    # collections
+    grpGeom = bpy.data.collections.new("Track Geometry")
+    grpObj  = bpy.data.collections.new("Track Objects")
+    grpMeta = bpy.data.collections.new("Track Metadata")
+
+    # texture atlas
+    atlas = createTextureAtlas(metadata, rootPath, weather)
+    mainMaterial = createMaterial('main', atlas, metadata['global_color'], weather, tod)
     
     for i, trkPart in enumerate(srt.trkparts):
 
@@ -451,8 +448,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
         ob = bpy.data.objects.new(f"Trk.{i}", me)
 
         # add all materials to mesh
-        for material in materials:
-            me.materials.append(material)
+        me.materials.append(mainMaterial)
 
         faces = []
 
@@ -520,7 +516,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
             trkPart.y * scale
         ])
         
-        new_objects.append(ob)
+        grpGeom.objects.link(ob)
 
         # Track sub-objects (usually, but not always, rings)
         if len(trkPart.objs) > 1: 
@@ -538,7 +534,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
                 ])
                 me.attributes['objectType'].data[j].value = subobj.objtype
 
-            new_objects.append(ob)
+            grpObj.objects.link(ob)
         
     # Decoration parts
     for i, decoPart in enumerate(srt.decoparts):
@@ -547,8 +543,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
         ob = bpy.data.objects.new(f"Deco.{i}", me)
         
         # add all materials to mesh
-        for material in materials:
-            me.materials.append(material)
+        me.materials.append(mainMaterial)
 
         # to mesh
         me.vertices.add(decoPart.num_vtxs)
@@ -616,7 +611,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
             decoPart.y * scale
         ])
 
-        new_objects.append(ob)
+        grpGeom.objects.link(ob)
 
     # path points
     me = bpy.data.meshes.new("PathPoints") 
@@ -628,7 +623,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
             subobj.z * scale,
             subobj.y * scale
         ])
-    new_objects.append(ob)
+    grpMeta.objects.link(ob)
 
     # intro points
     '''me = bpy.data.meshes.new("IntroPoints") 
@@ -640,7 +635,8 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
             subobj.z * scale,
             subobj.y * scale
         ])
-    new_objects.append(ob)'''
+    grpMeta.objects.link(ob)
+    '''
 
     # sec5
     '''me = bpy.data.meshes.new("Sec5") 
@@ -652,7 +648,8 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
             subobj.z * scale,
             subobj.y * scale
         ])
-    new_objects.append(ob)'''
+    grpMeta.objects.link(ob)
+    '''
 
     # main path points
     me = bpy.data.meshes.new("MainPathPoints") 
@@ -664,7 +661,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
             subobj.z * scale,
             subobj.y * scale
         ])
-    new_objects.append(ob)
+    grpMeta.objects.link(ob)
 
     # player spawn points
     me = bpy.data.meshes.new("SpawnPoints") 
@@ -689,7 +686,7 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
             subobj.z * scale,
             subobj.y * scale
         ])
-    new_objects.append(ob)
+    grpMeta.objects.link(ob)
 
     # replay camera points
     if (srt.num_replaypos < 0xFFFF):
@@ -702,14 +699,13 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
                 subobj.z * scale,
                 subobj.y * scale
             ])
-        new_objects.append(ob)
+        grpMeta.objects.link(ob)
 
     # excluding Sec9 for now
 
     # floormap
     if ('floormap' in metadata):
         floor_image = createFloormapTexture(metadata, rootPath, weather)
-
         floor_material = createMaterial("FloorMap", floor_image, metadata['global_color'], weather, tod)
         me = bpy.data.meshes.new("FloorMap") 
         ob = bpy.data.objects.new("FloorMap", me)
@@ -762,9 +758,9 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
         me.update(calc_edges=True)
         me.validate()
 
-        new_objects.append(ob)
+        grpGeom.objects.link(ob)
 
-    return new_objects
+    return [grpGeom, grpObj, grpMeta]
 
 def loadTrk(context, filepath, scale, trk, weather, tod):
     with open(filepath, mode='rb') as f: 
@@ -782,23 +778,23 @@ def loadTrk(context, filepath, scale, trk, weather, tod):
     if 'global_color' not in metadata:
         metadata['global_color'] = {}
 
-    objlist = convertTrk(track, metadata, filepath, scale, weather, tod)
+    grplist = convertTrk(track, metadata, filepath, scale, weather, tod)
     scn = bpy.context.scene
     
     for o in scn.objects:
         o.select_set(False)
     
-    for o in objlist:
-        scn.collection.objects.link(o)
-        if o.name.startswith("Deco"):
+    for o in grplist:
+        scn.collection.children.link(o)
+        '''if o.name.startswith("Deco"):
             # autofix weird UV issues with deco parts
             # TODO: very resource intensive. find way to avoid this
             bpy.context.view_layer.objects.active = o
             bpy.ops.object.mode_set(mode = 'EDIT')
-            bpy.ops.object.mode_set(mode = 'OBJECT')
+            bpy.ops.object.mode_set(mode = 'OBJECT')'''
 
-    for o in objlist:
-        o.select_set(True)
+    '''for o in grplist:
+        o.select_set(True)'''
 
     # Disable color space calculations
     bpy.context.scene.view_settings.view_transform = 'Raw'
