@@ -27,7 +27,7 @@
     ],
     "floormap": {
         "ply": "factory/factory.ply",
-        "ply_snow": "factory/snow/factory_s.ply",
+        "ply_snow": "factory/snow/factry_s.ply",
         "map": "factory/factory.map",
         "x1": -450.8096,
         "x2": 445.7539,
