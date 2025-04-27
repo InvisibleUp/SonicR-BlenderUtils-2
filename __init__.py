@@ -97,7 +97,7 @@ class SONICR_OP_ImportTrk(bpy.types.Operator, ImportHelper):
     )
 
     usebackground: BoolProperty(
-        name="Simulate background"
+        name="Import background"
     )
 
     usedrawdistance: BoolProperty(
@@ -234,7 +234,7 @@ def createFloormapTexture(metadata: dict, rootPath: Path, weather: str) -> Image
     
     ply = loadRawTexture(ply_path)
 
-    # final texture is 128*32 = 4096x4096
+    # final texture is 128*32 = 4096*4096
     texture = Image.new("RGBA", (4096, 4096))
 
     for x in range(128):
@@ -345,9 +345,9 @@ def createMaterial(name: str, image, global_color: dict | None, weather: str, to
     environment_color.name = "Environment Color"
     environment_color.operation = 'ADD'
     if (weather != 'none' and tod != 'none' and 'clear' in global_color):
-        r = (int(global_color[weather][tod]['r'], 16) - 128) / 256
-        g = (int(global_color[weather][tod]['g'], 16) - 128) / 256
-        b = (int(global_color[weather][tod]['b'], 16) - 128) / 256
+        r = (int(global_color[weather][tod]['r'], 16) - 128) / 256 / 4
+        g = (int(global_color[weather][tod]['g'], 16) - 128) / 256 / 4
+        b = (int(global_color[weather][tod]['b'], 16) - 128) / 256 / 4
         environment_color.inputs[1].default_value = (r, g, b)
     elif ('r' in global_color):
         r = (int(global_color['r'], 16) - 128) / 256
@@ -373,7 +373,7 @@ def createMaterial(name: str, image, global_color: dict | None, weather: str, to
     math_001.operation = 'SUBTRACT'
     math_001.use_clamp = False
     #Value_001
-    math_001.inputs[1].default_value = 75.0 * sf
+    math_001.inputs[1].default_value = 20.0 * sf
 
     #node Vector Math
     vector_math = material.nodes.new("ShaderNodeVectorMath")
@@ -396,7 +396,7 @@ def createMaterial(name: str, image, global_color: dict | None, weather: str, to
     vector_math_002.name = "Vector Math.002"
     vector_math_002.operation = 'DIVIDE'
     #Vector_001
-    vector_math_002.inputs[1].default_value = (40.0 * sf, 40.0 * sf, 40.0 * sf)
+    vector_math_002.inputs[1].default_value = (10.0 * sf, 10.0 * sf, 10.0 * sf)
 
     #node Vector Math.003
     vector_math_003 = material.nodes.new("ShaderNodeVectorMath")
@@ -418,7 +418,7 @@ def createMaterial(name: str, image, global_color: dict | None, weather: str, to
     math_003.operation = 'SUBTRACT'
     math_003.use_clamp = False
     #Value_001
-    math_003.inputs[1].default_value = 40.0 * sf
+    math_003.inputs[1].default_value = 10.0 * sf
 
     #node Math.004
     math_004 = material.nodes.new("ShaderNodeMath")
@@ -447,7 +447,7 @@ def createMaterial(name: str, image, global_color: dict | None, weather: str, to
     vector_math_005.name = "Vector Math.005"
     vector_math_005.operation = 'SNAP'
     #Vector_001
-    vector_math_005.inputs[1].default_value = (0.125, 0.125, 0.125)
+    vector_math_005.inputs[1].default_value = (0.25, 0.25, 0.25)
 
     #node Math.006
     math_006 = material.nodes.new("ShaderNodeMath")
@@ -455,7 +455,7 @@ def createMaterial(name: str, image, global_color: dict | None, weather: str, to
     math_006.operation = 'SNAP'
     math_006.use_clamp = False
     #Value_001
-    math_006.inputs[1].default_value = 0.25
+    math_006.inputs[1].default_value = 0.125
 
     #node UseDrawDistance
     usedrawdistance = material.nodes.new("ShaderNodeValue")
@@ -659,7 +659,7 @@ def setWorldBackground(metadata: dict, rootPath: Path, weather: str, tod: str):
     wave_texture.wave_profile = 'SIN'
     wave_texture.wave_type = 'BANDS'
     #Scale
-    wave_texture.inputs[1].default_value = 10.0
+    wave_texture.inputs[1].default_value = 10.0 if weather != "snow" else 0.0
     #Distortion
     wave_texture.inputs[2].default_value = 0.0
     #Detail
@@ -669,10 +669,11 @@ def setWorldBackground(metadata: dict, rootPath: Path, weather: str, tod: str):
     #Detail Roughness
     wave_texture.inputs[5].default_value = 0.5
     #Phase Offset
-    wave_fcurve = wave_texture.inputs[6].driver_add("default_value")
-    wave_driver = wave_fcurve.driver
-    wave_driver.type = "SCRIPTED"
-    wave_driver.expression = "-frame/5"
+    if weather != "snow":
+        wave_fcurve = wave_texture.inputs[6].driver_add("default_value")
+        wave_driver = wave_fcurve.driver
+        wave_driver.type = "SCRIPTED"
+        wave_driver.expression = "-frame/5"
 
     #node Mix.002
     mix_002 = skybox.nodes.new("ShaderNodeMix")
@@ -865,6 +866,12 @@ def setWorldBackground(metadata: dict, rootPath: Path, weather: str, tod: str):
     math_009.operation = 'MULTIPLY'
     math_009.use_clamp = False
 
+    #node Math.010
+    math_010 = skybox.nodes.new("ShaderNodeMath")
+    math_010.name = "Math.010"
+    math_010.operation = 'MULTIPLY'
+    math_010.use_clamp = False
+
 
     #Set locations
     world_output.location = (-757.238525390625, 778.646484375)
@@ -891,9 +898,10 @@ def setWorldBackground(metadata: dict, rootPath: Path, weather: str, tod: str):
     math_014.location = (-4128.26025390625, 888.9439086914062)
     map_range.location = (-1884.691162109375, 1116.2166748046875)
     math_015.location = (-2966.29638671875, 212.31423950195312)
-    water_enabled.location = (-2764.30712890625, 424.85443115234375)
+    water_enabled.location = (-2756.30712890625, 424.85443115234375)
     math_008.location = (-2514.138427734375, 207.23936462402344)
     math_009.location = (-2190.78759765625, 637.00537109375)
+    math_010.location = (-2501.588623046875, -139.632568359375)
 
     #Set dimensions
     world_output.width, world_output.height = 140.0, 100.0
@@ -923,6 +931,7 @@ def setWorldBackground(metadata: dict, rootPath: Path, weather: str, tod: str):
     water_enabled.width, water_enabled.height = 140.0, 100.0
     math_008.width, math_008.height = 140.0, 100.0
     math_009.width, math_009.height = 140.0, 100.0
+    math_010.width, math_010.height = 140.0, 100.0
 
     #initialize skybox links
     #background.Background -> world_output.Surface
@@ -977,8 +986,8 @@ def setWorldBackground(metadata: dict, rootPath: Path, weather: str, tod: str):
     skybox.links.new(separate_xyz.outputs[2], math_002.inputs[0])
     #math_006.Value -> combine_xyz.X
     skybox.links.new(math_006.outputs[0], combine_xyz.inputs[0])
-    #math_002.Value -> math_003.Value
-    skybox.links.new(math_002.outputs[0], math_003.inputs[1])
+    #math_010.Value -> math_003.Value
+    skybox.links.new(math_010.outputs[0], math_003.inputs[1])
     #math_003.Value -> mix.B
     skybox.links.new(math_003.outputs[0], mix.inputs[3])
     #math_008.Value -> math_003.Value
@@ -989,10 +998,14 @@ def setWorldBackground(metadata: dict, rootPath: Path, weather: str, tod: str):
     skybox.links.new(math_009.outputs[0], mix_001.inputs[0])
     #water_enabled.Value -> math_009.Value
     skybox.links.new(water_enabled.outputs[0], math_009.inputs[1])
-    #water_enabled.Value -> math_008.Value
-    skybox.links.new(water_enabled.outputs[0], math_008.inputs[0])
     #math_007.Value -> math_008.Value
     skybox.links.new(math_007.outputs[0], math_008.inputs[1])
+    #water_enabled.Value -> math_008.Value
+    skybox.links.new(water_enabled.outputs[0], math_008.inputs[0])
+    #math_002.Value -> math_010.Value
+    skybox.links.new(math_002.outputs[0], math_010.inputs[0])
+    #water_enabled.Value -> math_010.Value
+    skybox.links.new(water_enabled.outputs[0], math_010.inputs[1])
 
 # Convert a raw tpage/texture coordinate to a position on the texture atlas
 def getTextureCoords(tpage: int, x: int, y: int) -> (float, float):
