@@ -38,6 +38,7 @@
         "scale": 30.0
     },
     "bg": {
+        "has_water": true,
         "clear": {
             "sunset": "ruin/parallax/_r_dd.raw",
             "night": "ruin/parallax/_r_n.raw",

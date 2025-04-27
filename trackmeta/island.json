@@ -46,6 +46,7 @@
         "scale": 25.0
     },
     "bg": {
+        "has_water": true,
         "clear": {
             "sunset": "island/parallax/_i_dd.raw",
             "night": "island/parallax/_i_n.raw",

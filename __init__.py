@@ -125,6 +125,7 @@ def unregister():
 if __name__ == "__main__":
     register()
 
+''' Load a .RAW texture '''
 def loadRawTexture(filepath: str) -> Image.Image | None:
     filesize = os.path.getsize(filepath)
 
@@ -161,8 +162,8 @@ def loadRawTexture(filepath: str) -> Image.Image | None:
 
     return image
 
-# Create a 1024x1024 texture combining all defined textures as one
-# note: 1024x1024 is enough for 16 tpages. that ought to be enough.
+''' Create a 1024x1024 texture combining all defined textures as one '''
+# note: 1024x1024 is enough for 16 tpages. that ought to be sufficient.
 def createTextureAtlas(metadata: dict, rootPath: Path, weather: str):
     if weather == "snow":
         textures = metadata['textures_snow']
@@ -205,6 +206,7 @@ def createTextureAtlas(metadata: dict, rootPath: Path, weather: str):
 
     return bpy_im
 
+'''Create a texture for the floormap'''
 def createFloormapTexture(metadata: dict, rootPath: Path, weather: str) -> Image.Image:
     map_path = Path(rootPath, metadata['floormap']['map'])
     if weather == "snow":
@@ -331,7 +333,7 @@ def createMaterial(name: str, image, global_color: dict | None, weather: str, to
     environment_color.label = "Environment Color"
     environment_color.name = "Environment Color"
     environment_color.operation = 'ADD'
-    if (global_color is dict and weather != 'none' and tod != "none" and 'clear' in global_color):
+    if (weather != 'none' and tod != 'none' and 'clear' in global_color):
         r = (int(global_color[weather][tod]['r'], 16) - 128) / 256
         g = (int(global_color[weather][tod]['g'], 16) - 128) / 256
         b = (int(global_color[weather][tod]['b'], 16) - 128) / 256
@@ -349,7 +351,6 @@ def createMaterial(name: str, image, global_color: dict | None, weather: str, to
     math.name = "Math"
     math.operation = 'ROUND'
     math.use_clamp = True
-
 
     #Set locations
     texture_coordinate.location = (-752.1420288085938, 172.89166259765625)
@@ -407,6 +408,405 @@ def createMaterial(name: str, image, global_color: dict | None, weather: str, to
 
     return mat
 
+''' Sets the world background '''
+def setWorldBackground(metadata: dict, rootPath: Path, weather: str, tod: str):
+    if not 'bg' in metadata: return
+
+    # Retrieve metadata/textures
+    has_water = False
+    if isinstance(metadata['bg'], str):
+        bg_path = metadata['bg']
+    else:
+        if weather not in metadata['bg']: return
+        if tod not in metadata['bg'][weather]: return
+        bg_path = metadata['bg'][weather][tod]
+        if 'has_water' in metadata['bg']:
+            has_water = metadata['bg']['has_water']
+    bg_path = Path(rootPath).joinpath(bg_path)
+    bg_raw = loadRawTexture(bg_path)
+    # convert to Blender image
+    bg_image = bpy.data.images.new("atlas", 1664, 128)
+    # Disable color space calculations
+    bg_image.colorspace_settings.name = 'Non-Color'
+    # load data
+    bg_image.pixels = [x / 256 for x in bg_raw.tobytes()]
+    bg_image.pack()
+    bg_image.update()
+    with bpy.context.temp_override(edit_image=bg_image):
+        bpy.ops.image.flip(use_flip_y=True)
+
+    if (weather != 'none' and tod != 'none' and 'clear' in metadata['global_color']):
+        r = (int(metadata['global_color'][weather][tod]['r'], 16) - 128) / 256
+        g = (int(metadata['global_color'][weather][tod]['g'], 16) - 128) / 256
+        b = (int(metadata['global_color'][weather][tod]['b'], 16) - 128) / 256
+    else:
+        r = 0
+        g = 0
+        b = 0
+
+    #start with a clean node tree
+    skybox = bpy.data.worlds["World"].node_tree
+    for node in skybox.nodes:
+        skybox.nodes.remove(node)
+    skybox.color_tag = 'NONE'
+    skybox.description = ""
+
+    #initialize skybox nodes
+    #node World Output
+    world_output = skybox.nodes.new("ShaderNodeOutputWorld")
+    world_output.name = "World Output"
+    world_output.is_active_output = True
+    world_output.target = 'ALL'
+
+    #node Background
+    background = skybox.nodes.new("ShaderNodeBackground")
+    background.name = "Background"
+    #Strength
+    background.inputs[1].default_value = 1.0
+
+    #node Wave Texture
+    wave_texture = skybox.nodes.new("ShaderNodeTexWave")
+    wave_texture.name = "Wave Texture"
+    wave_texture.bands_direction = 'Z'
+    wave_texture.rings_direction = 'SPHERICAL'
+    wave_texture.wave_profile = 'SIN'
+    wave_texture.wave_type = 'BANDS'
+    #Scale
+    wave_texture.inputs[1].default_value = 10.0
+    #Distortion
+    wave_texture.inputs[2].default_value = 0.0
+    #Detail
+    wave_texture.inputs[3].default_value = 2.0
+    #Detail Scale
+    wave_texture.inputs[4].default_value = 1.0
+    #Detail Roughness
+    wave_texture.inputs[5].default_value = 0.5
+    #Phase Offset
+    wave_fcurve = wave_texture.inputs[6].driver_add("default_value")
+    wave_driver = wave_fcurve.driver
+    wave_driver.type = "SCRIPTED"
+    wave_driver.expression = "-frame/5"
+
+    #node Mix.002
+    mix_002 = skybox.nodes.new("ShaderNodeMix")
+    mix_002.name = "Mix.002"
+    mix_002.blend_type = 'MIX'
+    mix_002.clamp_factor = False
+    mix_002.clamp_result = False
+    mix_002.data_type = 'RGBA'
+    mix_002.factor_mode = 'UNIFORM'
+    #A_Color
+    mix_002.inputs[6].default_value = (0.19 + r, 0.66 + g, 0.82 + b, 1.0)
+    #B_Color
+    mix_002.inputs[7].default_value = (0.0 + r, 1.0 + g, 1.0 + b, 1.0)
+
+    #node Geometry
+    geometry = skybox.nodes.new("ShaderNodeNewGeometry")
+    geometry.name = "Geometry"
+
+    #node Image Texture
+    image_texture = skybox.nodes.new("ShaderNodeTexImage")
+    image_texture.name = "Image Texture"
+    image_texture.extension = 'EXTEND'
+    image_texture.image_user.frame_current = 0
+    image_texture.image_user.frame_duration = 100
+    image_texture.image_user.frame_offset = 0
+    image_texture.image_user.frame_start = 1
+    image_texture.image_user.tile = 0
+    image_texture.image_user.use_auto_refresh = False
+    image_texture.image_user.use_cyclic = False
+    image_texture.interpolation = 'Closest'
+    image_texture.projection = 'FLAT'
+    image_texture.projection_blend = 0.0
+    image_texture.image = bg_image
+
+    #node Separate XYZ
+    separate_xyz = skybox.nodes.new("ShaderNodeSeparateXYZ")
+    separate_xyz.name = "Separate XYZ"
+
+    #node Combine XYZ
+    combine_xyz = skybox.nodes.new("ShaderNodeCombineXYZ")
+    combine_xyz.name = "Combine XYZ"
+    #Z
+    combine_xyz.inputs[2].default_value = 0.0
+
+    #node Math
+    math = skybox.nodes.new("ShaderNodeMath")
+    math.name = "Math"
+    math.operation = 'MULTIPLY'
+    math.use_clamp = True
+    #Value_001
+    math.inputs[1].default_value = 4.0
+
+    #node Math.001
+    math_001 = skybox.nodes.new("ShaderNodeMath")
+    math_001.name = "Math.001"
+    math_001.operation = 'LESS_THAN'
+    math_001.use_clamp = False
+    #Value_001
+    math_001.inputs[1].default_value = 0.0
+
+    #node Mix
+    mix = skybox.nodes.new("ShaderNodeMix")
+    mix.name = "Mix"
+    mix.blend_type = 'MIX'
+    mix.clamp_factor = False
+    mix.clamp_result = False
+    mix.data_type = 'FLOAT'
+    mix.factor_mode = 'UNIFORM'
+
+    #node Math.002
+    math_002 = skybox.nodes.new("ShaderNodeMath")
+    math_002.name = "Math.002"
+    math_002.operation = 'MULTIPLY'
+    math_002.use_clamp = True
+    #Value_001
+    math_002.inputs[1].default_value = -6.0
+
+    #node Math.004
+    math_004 = skybox.nodes.new("ShaderNodeMath")
+    math_004.name = "Math.004"
+    math_004.operation = 'DIVIDE'
+    math_004.use_clamp = False
+    #Value_001
+    math_004.inputs[1].default_value = -3.141590118408203
+
+    #node Math.005
+    math_005 = skybox.nodes.new("ShaderNodeMath")
+    math_005.name = "Math.005"
+    math_005.operation = 'ARCTAN2'
+    math_005.use_clamp = False
+
+    #node Math.006
+    math_006 = skybox.nodes.new("ShaderNodeMath")
+    math_006.name = "Math.006"
+    math_006.operation = 'FRACT'
+    math_006.use_clamp = False
+
+    #node Mix.001
+    mix_001 = skybox.nodes.new("ShaderNodeMix")
+    mix_001.name = "Mix.001"
+    mix_001.blend_type = 'ADD'
+    mix_001.clamp_factor = True
+    mix_001.clamp_result = False
+    mix_001.data_type = 'RGBA'
+    mix_001.factor_mode = 'UNIFORM'
+
+    #node Vector Math
+    vector_math = skybox.nodes.new("ShaderNodeVectorMath")
+    vector_math.name = "Vector Math"
+    vector_math.operation = 'DIVIDE'
+    #Vector_001
+    vector_math.inputs[1].default_value = (3.0, 3.0, 3.0)
+
+    #node Math.003
+    math_003 = skybox.nodes.new("ShaderNodeMath")
+    math_003.name = "Math.003"
+    math_003.operation = 'ADD'
+    math_003.use_clamp = False
+
+    #node Math.007
+    math_007 = skybox.nodes.new("ShaderNodeMath")
+    math_007.name = "Math.007"
+    math_007.operation = 'DIVIDE'
+    math_007.use_clamp = False
+    #Value_001
+    math_007.inputs[1].default_value = 16.0
+
+    #node Combine XYZ.001
+    combine_xyz_001 = skybox.nodes.new("ShaderNodeCombineXYZ")
+    combine_xyz_001.name = "Combine XYZ.001"
+    #X
+    combine_xyz_001.inputs[0].default_value = 0.0
+    #Y
+    combine_xyz_001.inputs[1].default_value = 0.0
+
+    #node Math.013
+    math_013 = skybox.nodes.new("ShaderNodeMath")
+    math_013.name = "Math.013"
+    math_013.operation = 'POWER'
+    math_013.use_clamp = True
+    #Value_001
+    math_013.inputs[1].default_value = 0.10000000149011612
+
+    #node Math.014
+    math_014 = skybox.nodes.new("ShaderNodeMath")
+    math_014.name = "Math.014"
+    math_014.operation = 'MULTIPLY'
+    math_014.use_clamp = False
+    #Value_001
+    math_014.inputs[1].default_value = -1.0
+
+    #node Map Range
+    map_range = skybox.nodes.new("ShaderNodeMapRange")
+    map_range.name = "Map Range"
+    map_range.clamp = True
+    map_range.data_type = 'FLOAT'
+    map_range.interpolation_type = 'LINEAR'
+    #From Min
+    map_range.inputs[1].default_value = 0.25
+    #From Max
+    map_range.inputs[2].default_value = 0.75
+    #To Min
+    map_range.inputs[3].default_value = 0.0
+    #To Max
+    map_range.inputs[4].default_value = 1.0
+
+    #node Math.015
+    math_015 = skybox.nodes.new("ShaderNodeMath")
+    math_015.name = "Math.015"
+    math_015.operation = 'ADD'
+    math_015.use_clamp = False
+    #Value_001
+    math_015.inputs[1].default_value = -0.5
+
+    #node Water Enabled
+    water_enabled = skybox.nodes.new("ShaderNodeValue")
+    water_enabled.label = "Water Enabled"
+    water_enabled.name = "Water Enabled"
+    water_enabled.outputs[0].default_value = 1.0 if has_water else 0.0
+
+    #node Math.008
+    math_008 = skybox.nodes.new("ShaderNodeMath")
+    math_008.name = "Math.008"
+    math_008.operation = 'MULTIPLY'
+    math_008.use_clamp = False
+
+    #node Math.009
+    math_009 = skybox.nodes.new("ShaderNodeMath")
+    math_009.name = "Math.009"
+    math_009.operation = 'MULTIPLY'
+    math_009.use_clamp = False
+
+
+    #Set locations
+    world_output.location = (-757.238525390625, 778.646484375)
+    background.location = (-976.409423828125, 797.6539306640625)
+    wave_texture.location = (-3554.89404296875, 1184.552734375)
+    mix_002.location = (-1631.6536865234375, 895.7874755859375)
+    geometry.location = (-4599.33154296875, 676.36767578125)
+    image_texture.location = (-1496.288330078125, 546.562255859375)
+    separate_xyz.location = (-4354.81640625, 723.9926147460938)
+    combine_xyz.location = (-1739.6473388671875, 531.3412475585938)
+    math.location = (-2519.0595703125, 383.3988342285156)
+    math_001.location = (-2518.927490234375, 555.941162109375)
+    mix.location = (-1986.791748046875, 483.0517883300781)
+    math_002.location = (-2758.73828125, 15.614013671875)
+    math_004.location = (-2505.093505859375, 845.13818359375)
+    math_005.location = (-2693.676513671875, 837.2177734375)
+    math_006.location = (-2325.196044921875, 809.7803955078125)
+    mix_001.location = (-1193.0732421875, 767.93603515625)
+    vector_math.location = (-1416.1317138671875, 908.6997680664062)
+    math_003.location = (-2212.44677734375, 227.21624755859375)
+    math_007.location = (-2756.41455078125, 203.84359741210938)
+    combine_xyz_001.location = (-3765.7373046875, 1060.7265625)
+    math_013.location = (-3942.17041015625, 983.3365478515625)
+    math_014.location = (-4128.26025390625, 888.9439086914062)
+    map_range.location = (-1884.691162109375, 1116.2166748046875)
+    math_015.location = (-2966.29638671875, 212.31423950195312)
+    water_enabled.location = (-2764.30712890625, 424.85443115234375)
+    math_008.location = (-2514.138427734375, 207.23936462402344)
+    math_009.location = (-2190.78759765625, 637.00537109375)
+
+    #Set dimensions
+    world_output.width, world_output.height = 140.0, 100.0
+    background.width, background.height = 140.0, 100.0
+    wave_texture.width, wave_texture.height = 150.0, 100.0
+    mix_002.width, mix_002.height = 140.0, 100.0
+    geometry.width, geometry.height = 140.0, 100.0
+    image_texture.width, image_texture.height = 240.0, 100.0
+    separate_xyz.width, separate_xyz.height = 140.0, 100.0
+    combine_xyz.width, combine_xyz.height = 140.0, 100.0
+    math.width, math.height = 140.0, 100.0
+    math_001.width, math_001.height = 140.0, 100.0
+    mix.width, mix.height = 140.0, 100.0
+    math_002.width, math_002.height = 140.0, 100.0
+    math_004.width, math_004.height = 140.0, 100.0
+    math_005.width, math_005.height = 140.0, 100.0
+    math_006.width, math_006.height = 140.0, 100.0
+    mix_001.width, mix_001.height = 140.0, 100.0
+    vector_math.width, vector_math.height = 140.0, 100.0
+    math_003.width, math_003.height = 140.0, 100.0
+    math_007.width, math_007.height = 140.0, 100.0
+    combine_xyz_001.width, combine_xyz_001.height = 140.0, 100.0
+    math_013.width, math_013.height = 140.0, 100.0
+    math_014.width, math_014.height = 140.0, 100.0
+    map_range.width, map_range.height = 140.0, 100.0
+    math_015.width, math_015.height = 140.0, 100.0
+    water_enabled.width, water_enabled.height = 140.0, 100.0
+    math_008.width, math_008.height = 140.0, 100.0
+    math_009.width, math_009.height = 140.0, 100.0
+
+    #initialize skybox links
+    #background.Background -> world_output.Surface
+    skybox.links.new(background.outputs[0], world_output.inputs[0])
+    #combine_xyz.Vector -> image_texture.Vector
+    skybox.links.new(combine_xyz.outputs[0], image_texture.inputs[0])
+    #geometry.Position -> separate_xyz.Vector
+    skybox.links.new(geometry.outputs[0], separate_xyz.inputs[0])
+    #separate_xyz.Z -> math.Value
+    skybox.links.new(separate_xyz.outputs[2], math.inputs[0])
+    #separate_xyz.Z -> math_001.Value
+    skybox.links.new(separate_xyz.outputs[2], math_001.inputs[0])
+    #math_001.Value -> mix.Factor
+    skybox.links.new(math_001.outputs[0], mix.inputs[0])
+    #math.Value -> mix.A
+    skybox.links.new(math.outputs[0], mix.inputs[2])
+    #mix.Result -> combine_xyz.Y
+    skybox.links.new(mix.outputs[0], combine_xyz.inputs[1])
+    #math_005.Value -> math_004.Value
+    skybox.links.new(math_005.outputs[0], math_004.inputs[0])
+    #separate_xyz.X -> math_005.Value
+    skybox.links.new(separate_xyz.outputs[0], math_005.inputs[0])
+    #separate_xyz.Y -> math_005.Value
+    skybox.links.new(separate_xyz.outputs[1], math_005.inputs[1])
+    #math_004.Value -> math_006.Value
+    skybox.links.new(math_004.outputs[0], math_006.inputs[0])
+    #mix_002.Result -> vector_math.Vector
+    skybox.links.new(mix_002.outputs[2], vector_math.inputs[0])
+    #math_015.Value -> math_007.Value
+    skybox.links.new(math_015.outputs[0], math_007.inputs[0])
+    #combine_xyz_001.Vector -> wave_texture.Vector
+    skybox.links.new(combine_xyz_001.outputs[0], wave_texture.inputs[0])
+    #math_013.Value -> combine_xyz_001.Z
+    skybox.links.new(math_013.outputs[0], combine_xyz_001.inputs[2])
+    #separate_xyz.Z -> math_014.Value
+    skybox.links.new(separate_xyz.outputs[2], math_014.inputs[0])
+    #math_014.Value -> math_013.Value
+    skybox.links.new(math_014.outputs[0], math_013.inputs[0])
+    #vector_math.Vector -> mix_001.B
+    skybox.links.new(vector_math.outputs[0], mix_001.inputs[7])
+    #wave_texture.Fac -> map_range.Value
+    skybox.links.new(wave_texture.outputs[1], map_range.inputs[0])
+    #map_range.Result -> mix_002.Factor
+    skybox.links.new(map_range.outputs[0], mix_002.inputs[0])
+    #wave_texture.Fac -> math_015.Value
+    skybox.links.new(wave_texture.outputs[1], math_015.inputs[0])
+    #mix_001.Result -> background.Color
+    skybox.links.new(mix_001.outputs[2], background.inputs[0])
+    #image_texture.Color -> mix_001.A
+    skybox.links.new(image_texture.outputs[0], mix_001.inputs[6])
+    #separate_xyz.Z -> math_002.Value
+    skybox.links.new(separate_xyz.outputs[2], math_002.inputs[0])
+    #math_006.Value -> combine_xyz.X
+    skybox.links.new(math_006.outputs[0], combine_xyz.inputs[0])
+    #math_002.Value -> math_003.Value
+    skybox.links.new(math_002.outputs[0], math_003.inputs[1])
+    #math_003.Value -> mix.B
+    skybox.links.new(math_003.outputs[0], mix.inputs[3])
+    #math_008.Value -> math_003.Value
+    skybox.links.new(math_008.outputs[0], math_003.inputs[0])
+    #math_001.Value -> math_009.Value
+    skybox.links.new(math_001.outputs[0], math_009.inputs[0])
+    #math_009.Value -> mix_001.Factor
+    skybox.links.new(math_009.outputs[0], mix_001.inputs[0])
+    #water_enabled.Value -> math_009.Value
+    skybox.links.new(water_enabled.outputs[0], math_009.inputs[1])
+    #water_enabled.Value -> math_008.Value
+    skybox.links.new(water_enabled.outputs[0], math_008.inputs[0])
+    #math_007.Value -> math_008.Value
+    skybox.links.new(math_007.outputs[0], math_008.inputs[1])
+
 # Convert a raw tpage/texture coordinate to a position on the texture atlas
 def getTextureCoords(tpage: int, x: int, y: int) -> (float, float):
     # convert to float
@@ -436,6 +836,9 @@ def convertTrk(srt: Srt, metadata: dict, filepath: str, scale: float, weather: s
     grpGeom = bpy.data.collections.new("Track Geometry")
     grpObj  = bpy.data.collections.new("Track Objects")
     grpMeta = bpy.data.collections.new("Track Metadata")
+
+    # set world background
+    setWorldBackground(metadata, rootPath, weather, tod)
 
     # texture atlas
     atlas = createTextureAtlas(metadata, rootPath, weather)
@@ -786,17 +1189,9 @@ def loadTrk(context, filepath, scale, trk, weather, tod):
     
     for o in grplist:
         scn.collection.children.link(o)
-        '''if o.name.startswith("Deco"):
-            # autofix weird UV issues with deco parts
-            # TODO: very resource intensive. find way to avoid this
-            bpy.context.view_layer.objects.active = o
-            bpy.ops.object.mode_set(mode = 'EDIT')
-            bpy.ops.object.mode_set(mode = 'OBJECT')'''
-
-    '''for o in grplist:
-        o.select_set(True)'''
 
     # Disable color space calculations
     bpy.context.scene.view_settings.view_transform = 'Raw'
+    bpy.context.scene.render.fps = 30
 
     return {'FINISHED'}

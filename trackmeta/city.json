@@ -39,6 +39,7 @@
         "scale": 25.0
     },
     "bg": {
+        "has_water": true,
         "clear": {
             "sunset": "city/parallax/_c_dd.raw",
             "night": "city/parallax/_c_n.raw",
