@@ -135,6 +135,16 @@ def unregister():
 if __name__ == "__main__":
     register()
 
+def fixFilePath(rootpath: str, filepath: str) -> str:
+    if os.path.exists(os.path.join(rootpath, filepath)):
+        return os.path.join(rootpath, filepath)
+    elif os.path.exists(os.path.join(rootpath, filepath.upper())):
+        return os.path.join(rootpath, filepath.upper())
+    elif os.path.exists(os.path.join(rootpath, filepath.lower())):
+        return os.path.join(rootpath, filepath.lower())
+    else:
+        raise ValueError(f"File {filepath} not found")
+
 ''' Load a .RAW texture '''
 def loadRawTexture(filepath: str) -> Image.Image | None:
     filesize = os.path.getsize(filepath)
@@ -152,7 +162,6 @@ def loadRawTexture(filepath: str) -> Image.Image | None:
     else:
         return None
     
-    # TODO: handle case-sensitive file systems
     with open(filepath, mode='rb') as f:
         image = Image.frombytes('RGB', size, f.read())
     
@@ -197,7 +206,7 @@ def createTextureAtlas(metadata: dict, rootPath: Path, weather: str):
             continue
 
         # only supporting 256x256 images for the atlas
-        image = loadRawTexture(Path(rootPath) / path)
+        image = loadRawTexture(fixFilePath(rootPath, path))
         assert(image.size == (256, 256))
 
         atlas.paste(image, (x, y))
@@ -218,11 +227,11 @@ def createTextureAtlas(metadata: dict, rootPath: Path, weather: str):
 
 '''Create a texture for the floormap'''
 def createFloormapTexture(metadata: dict, rootPath: Path, weather: str) -> Image.Image:
-    map_path = Path(rootPath, metadata['floormap']['map'])
+    map_path = fixFilePath(rootPath, metadata['floormap']['map'])
     if weather == "snow":
-        ply_path = Path(rootPath, metadata['floormap']['ply_snow'])
+        ply_path = fixFilePath(rootPath, metadata['floormap']['ply_snow'])
     else:
-        ply_path = Path(rootPath, metadata['floormap']['ply'])
+        ply_path = fixFilePath(rootPath, metadata['floormap']['ply'])
 
     # Map is a 256x256 array of tile indicies stored as bytes
     # Map needs to be cropped to the upper 128x128 tiles (the rest is blank/junk)
@@ -609,7 +618,7 @@ def setWorldBackground(metadata: dict, rootPath: Path, weather: str, tod: str):
         bg_path = metadata['bg'][weather][tod]
         if 'has_water' in metadata['bg']:
             has_water = metadata['bg']['has_water']
-    bg_path = Path(rootPath).joinpath(bg_path)
+    bg_path = fixFilePath(rootPath, bg_path)
     bg_raw = loadRawTexture(bg_path)
     # convert to Blender image
     bg_image = bpy.data.images.new("atlas", 1664, 128)
@@ -1037,9 +1046,13 @@ def convertTrk(
         usedrawdistance: bool,
         usebackground: bool
     ):
-    # TODO: handle case-insensitive file systems
-    trkPath = str(Path(metadata['file_trk'].lower()))
-    rootPath = str(Path(filepath.lower())).removesuffix(trkPath)
+    trkPath = str(Path(metadata['file_trk']))
+    if str(Path(filepath)).endswith(trkPath.lower()):
+        rootPath = str(Path(filepath)).removesuffix(trkPath.lower())
+    elif str(Path(filepath)).endswith(trkPath.upper()):
+        rootPath = str(Path(filepath)).removesuffix(trkPath.upper())
+    else:
+        rootPath = str(Path(filepath)).removesuffix(trkPath)
 
     # collections
     grpGeom = bpy.data.collections.new("Track Geometry")
